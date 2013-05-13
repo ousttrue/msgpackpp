@@ -13,11 +13,14 @@ namespace asiorpc {
 
     class dispatcher
     {
-        typedef std::function<std::shared_ptr<msgpack::sbuffer>(msgpack::rpc::msgid_t, msgpack::object)> func;
+        typedef std::function<
+            std::shared_ptr<msgpack::sbuffer>(msgpack::rpc::msgid_t, msgpack::object)
+            > func;
         std::map<std::string, func> m_handlerMap;
 
     public:
-        std::shared_ptr<msgpack::sbuffer> dispatch(::msgpack::object msg, ::msgpack::rpc::auto_zone z)
+        std::shared_ptr<msgpack::sbuffer> dispatch(
+                ::msgpack::object msg, ::msgpack::rpc::auto_zone z)
         {
             ::msgpack::rpc::msg_rpc rpc;
             msg.convert(&rpc);
@@ -41,18 +44,26 @@ namespace asiorpc {
         void add_handler(std::function<R(A1, A2)> handler, const std::string &method)
         {
             m_handlerMap.insert(std::make_pair(method, [handler](
-                            ::msgpack::rpc::msgid_t msgid, ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>{
-                        // extract args
-                        ::msgpack::type::tuple<A1, A2> params;
-                        msg_params.convert(&params);
-                        // error type
-                        typedef ::msgpack::type::nil Error;
-                        auto result=handler(params.template get<0>(), params.template get<1>());
-                        ::msgpack::rpc::msg_response<R&, Error> msgres(result, msgpack::type::nil(), msgid);
-                        // result
-                        auto sbuf=std::make_shared<msgpack::sbuffer>();
-                        msgpack::pack(*sbuf, msgres);
-                        return sbuf;
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                            // extract args
+                            ::msgpack::type::tuple<A1, A2> params;
+                            msg_params.convert(&params);
+                            // error type
+                            typedef ::msgpack::type::nil Error;
+                            auto result=handler(
+                                params.template get<0>(), 
+                                params.template get<1>()
+                                );
+                            ::msgpack::rpc::msg_response<R&, Error> msgres(
+                                result, 
+                                msgpack::type::nil(), 
+                                msgid);
+                            // result
+                            auto sbuf=std::make_shared<msgpack::sbuffer>();
+                            msgpack::pack(*sbuf, msgres);
+                            return sbuf;
                         }));
         }
 
@@ -93,31 +104,38 @@ namespace asiorpc {
             return m_socket;
         }
 
-        void start()
+        void startRead()
         {
-            auto self=shared_from_this();
-            auto &pac=m_pac;
-            auto data=m_data;
-            auto dispatcher=m_dispatcher;
-            m_socket.async_read_some(boost::asio::buffer(m_data, max_length),
-                    [self, &pac, data, dispatcher](const boost::system::error_code& error, size_t bytes_transferred){
-                        if (!error){
-                            std::cout << "read " << bytes_transferred << " bytes" << std::endl;
+            auto pac=&m_pac;
+            auto shared=shared_from_this();
+            m_socket.async_read_some(
+                    boost::asio::buffer(pac->buffer(), pac->buffer_capacity()),
+                    [shared, pac](const boost::system::error_code &error,
+                        size_t bytes_transferred)
+                    {
+                        if (error) {
+                            // todo
+                        }
+                        else {
 
-                            memcpy(pac.buffer(), data, bytes_transferred);
-                            pac.buffer_consumed(bytes_transferred);
-                            if(pac.execute()){
-                                ::msgpack::object msg = pac.data();
-                                ::msgpack::rpc::auto_zone z(pac.release_zone());
-                                pac.reset();
+                            char *p=pac->buffer();
+                            pac->buffer_consumed(bytes_transferred);
+                            msgpack::unpacked result;
+
+                            // オブジェクトを取り出す
+                            while(pac->execute()) {
+                                size_t size=pac->parsed_size();
+                                // msgpack message
+                                ::msgpack::object msg = pac->data();
+                                ::msgpack::rpc::auto_zone z(pac->release_zone());
                                 try{
-                                    std::shared_ptr<msgpack::sbuffer> result=dispatcher->dispatch(msg, z);
+                                    std::shared_ptr<msgpack::sbuffer> result=shared->m_dispatcher->dispatch(msg, z);
                                     std::cout << "dispatch" << std::endl;
 
 									// for vc
-									auto self2=self;
+									auto self2=shared;
 
-                                    self->socket().async_write_some(boost::asio::buffer(result->data(), result->size()),
+                                    shared->socket().async_write_some(boost::asio::buffer(result->data(), result->size()),
                                     [self2, result](const boost::system::error_code& error, size_t bytes_transferred){
                                         std::cout << "write " << bytes_transferred << " bytes" << std::endl;
                                     });
@@ -126,11 +144,14 @@ namespace asiorpc {
                                     // error
                                     std::cerr << "error" << std::endl;
                                 }
+                                //
+                                pac->reset();
+                                p+=size;
                             }
-                        }
-                        else
-                        {
-                            // finish
+
+                            // 永遠に読み込み続ける
+                            // pipeline
+                            shared->startRead();
                         }
                     });
         }
@@ -164,7 +185,7 @@ namespace asiorpc {
                         }
                         else{
                             std::cout << "accepted" << std::endl;
-                            new_connection->start();
+                            new_connection->startRead();
 
                             // next
                             self->start_accept();
