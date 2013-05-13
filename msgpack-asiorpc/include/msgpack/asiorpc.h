@@ -87,12 +87,39 @@ namespace asiorpc {
                             return sbuf;
                         }));
         }
+    };
 
+
+    class request_factory
+    {
+        ::msgpack::rpc::msgid_t m_next_msgid;
+    public:
+        request_factory()
+            : m_next_msgid(1)
+        {
+        }
+
+        ::msgpack::rpc::msgid_t next_msgid()
+        {
+            return m_next_msgid++;
+        }
+
+        // 2
+        template<typename R, typename A1, typename A2>
+        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
+        create(std::function<R(A1, A2)>, const std::string &method, A1 a1, A2 a2)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef ::msgpack::type::tuple<A1, A2> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(a1, a2), msgid);
+        }
     };
 
 
     class session: public std::enable_shared_from_this<session>
     {
+        request_factory m_request_factory;
         boost::asio::ip::tcp::socket m_socket;
         enum { max_length = 1024 };
         char m_data[max_length];
@@ -102,8 +129,9 @@ namespace asiorpc {
         bool m_writing;
         std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
     public:
-        session(boost::asio::io_service& io_service, std::shared_ptr<dispatcher> dispatcher)
-            : m_socket(io_service), m_pac(1024), m_dispatcher(dispatcher),
+        session(boost::asio::io_service& io_service, 
+                std::shared_ptr<dispatcher> d=std::shared_ptr<dispatcher>())
+            : m_socket(io_service), m_pac(1024), m_dispatcher(d),
             m_writing(false)
             {
             }
@@ -115,6 +143,29 @@ namespace asiorpc {
         boost::asio::ip::tcp::socket& socket()
         {
             return m_socket;
+        }
+
+        // synchronous connect
+        void connect(boost::asio::ip::tcp::endpoint endpoint)
+        {
+           m_socket.connect(endpoint); 
+        }
+
+        // 2
+        template<typename R, typename A1, typename A2>
+        R call(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
+        {
+            return request<R>(m_request_factory.create(
+                        std::function<R(A1, A2)>(handler), 
+                        method, a1, a2));
+        }
+        template<typename R, typename A1, typename A2>
+        R call(std::function<R(A1, A2)> func, const std::string &method, A1 a1, A2 a2)
+        {
+            return request<R>(m_request_factory.create(
+                        func,
+                        method, a1, a2));
+
         }
 
         // read connection
@@ -204,6 +255,52 @@ namespace asiorpc {
         }
 
     private:
+        // request
+        template<typename R, typename Parameter>
+        R request(const ::msgpack::rpc::msg_request<std::string, Parameter> msgreq)
+        {
+            ::msgpack::sbuffer sbuf;
+            ::msgpack::pack(sbuf, msgreq);
+
+            // request
+            size_t len=boost::asio::write(m_socket, boost::asio::buffer(sbuf.data(), sbuf.size()));
+
+            // response
+            size_t pos=0;
+            for (;;)
+            {
+                std::vector<char> buf(128);
+                boost::system::error_code error;
+
+                size_t len = m_socket.read_some(boost::asio::buffer(buf), error);
+                memcpy(m_pac.buffer()+pos, &buf[0], len);
+                pos+=len;
+                m_pac.buffer_consumed(pos);
+                if(m_pac.execute()){
+                    ::msgpack::object msg = m_pac.data();
+                    m_pac.reset();
+
+                    ::msgpack::rpc::msg_response<object, object> res;
+                    msg.convert(&res);
+
+                    R value;
+                    res.result.convert(&value);
+                    return value;
+                }
+
+                if (error == boost::asio::error::eof){
+                    break; // Connection closed cleanly by peer.
+                }
+                else if (error){
+                    throw boost::system::system_error(error); // Some other error.
+                }
+
+            }
+
+            return R();
+        }
+
+        // write
         void enqueueWrite(std::shared_ptr<msgpack::sbuffer> msg)
         {
             // lock
@@ -321,114 +418,5 @@ namespace asiorpc {
     };
 
 
-    class request_factory
-    {
-        ::msgpack::rpc::msgid_t m_next_msgid;
-    public:
-        request_factory()
-            : m_next_msgid(1)
-        {
-        }
-
-        ::msgpack::rpc::msgid_t next_msgid()
-        {
-            return m_next_msgid++;
-        }
-
-        // 2
-        template<typename R, typename A1, typename A2>
-        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
-        create(std::function<R(A1, A2)>, const std::string &method, A1 a1, A2 a2)
-        {
-            ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef ::msgpack::type::tuple<A1, A2> Parameter;
-            return ::msgpack::rpc::msg_request<std::string, Parameter>(
-                    method, Parameter(a1, a2), msgid);
-        }
-    };
-
-
-    class client
-    {
-        boost::asio::ip::tcp::socket m_socket;
-        unpacker m_pac;
-        request_factory m_request_factory;
-
-    public:
-        client(boost::asio::io_service &io_service)
-            : m_socket(io_service), m_pac(1024)
-        {
-        }
-
-		~client()
-		{
-		}
-
-        void connect(boost::asio::ip::tcp::endpoint endpoint)
-        {
-           m_socket.connect(endpoint); 
-        }
-
-        // 2
-        template<typename R, typename A1, typename A2>
-        R call(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
-        {
-            return request<R>(m_request_factory.create(
-                        std::function<R(A1, A2)>(handler), 
-                        method, a1, a2));
-        }
-        template<typename R, typename A1, typename A2>
-        R call(std::function<R(A1, A2)> func, const std::string &method, A1 a1, A2 a2)
-        {
-            return request<R>(m_request_factory.create(
-                        func,
-                        method, a1, a2));
-
-        }
-
-        template<typename R, typename Parameter>
-        R request(const ::msgpack::rpc::msg_request<std::string, Parameter> msgreq)
-        {
-            ::msgpack::sbuffer sbuf;
-            ::msgpack::pack(sbuf, msgreq);
-
-            // request
-            size_t len=boost::asio::write(m_socket, boost::asio::buffer(sbuf.data(), sbuf.size()));
-
-            // response
-            size_t pos=0;
-            for (;;)
-            {
-                std::vector<char> buf(128);
-                boost::system::error_code error;
-
-                size_t len = m_socket.read_some(boost::asio::buffer(buf), error);
-                memcpy(m_pac.buffer()+pos, &buf[0], len);
-                pos+=len;
-                m_pac.buffer_consumed(pos);
-                if(m_pac.execute()){
-                    ::msgpack::object msg = m_pac.data();
-                    m_pac.reset();
-
-                    ::msgpack::rpc::msg_response<object, object> res;
-                    msg.convert(&res);
-
-                    R value;
-                    res.result.convert(&value);
-                    return value;
-                }
-
-                if (error == boost::asio::error::eof){
-                    break; // Connection closed cleanly by peer.
-                }
-                else if (error){
-                    throw boost::system::system_error(error); // Some other error.
-                }
-
-            }
-
-            return R();
-        }
-    };
 
 }}

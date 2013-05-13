@@ -8,6 +8,6 @@ https://github.com/msgpack/msgpack-rpc
 
 ToDo
 ----
-* sessionとclientを統合する
+* class名をキャメルケースにする
 * 非同期クライアント
 

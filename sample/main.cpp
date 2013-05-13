@@ -65,7 +65,7 @@ int main(int argc, char **argv)
         boost::asio::io_service io_service;
         auto endpoint=boost::asio::ip::tcp::endpoint(
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT);
-        msgpack::asiorpc::client client(io_service); 
+        msgpack::asiorpc::session client(io_service); 
         std::cout << "connect to... " << endpoint << std::endl;
         client.connect(endpoint);
         std::cout << "done" << std::endl;

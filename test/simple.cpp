@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE( func2 )
         boost::asio::io_service io_service;
         auto endpoint=boost::asio::ip::tcp::endpoint(
                 boost::asio::ip::address::from_string("127.0.0.1"), PORT);
-        msgpack::asiorpc::client client(io_service); 
+        msgpack::asiorpc::session client(io_service); 
         client.connect(endpoint);
 
         auto functype=std::function<int(int, int)>();
