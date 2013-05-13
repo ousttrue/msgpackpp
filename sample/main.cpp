@@ -21,8 +21,8 @@ static void server()
             boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
 
     // register callback
-    server.get_dispatcher()->add_handler("add", &add);
-    server.get_dispatcher()->add_handler("mul", &mul);
+    server.get_dispatcher()->add_handler(&add, "add");
+    server.get_dispatcher()->add_handler(&mul, "mul");
 
     std::cout << "start server..." << std::endl;
     io_service.run();

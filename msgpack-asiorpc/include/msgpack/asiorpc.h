@@ -33,12 +33,12 @@ namespace asiorpc {
 
         // 2
         template<typename R, typename A1, typename A2>
-        void add_handler(const std::string &method, R(*handler)(A1, A2))
+        void add_handler(R(*handler)(A1, A2), const std::string &method)
         {
-            add_handler(method, std::function<R(A1, A2)>(handler));
+            add_handler(std::function<R(A1, A2)>(handler), method);
         }
         template<typename R, typename A1, typename A2>
-        void add_handler(const std::string &method, std::function<R(A1, A2)> handler)
+        void add_handler(std::function<R(A1, A2)> handler, const std::string &method)
         {
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>{
