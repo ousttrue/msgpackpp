@@ -12,21 +12,43 @@ static int mul(int a, int b)
     return a*b;
 }
 
-static void server()
+class server
 {
-    boost::asio::io_service io_service;
+    boost::asio::io_service m_io_service;
+    msgpack::asiorpc::server m_server;
+    std::shared_ptr<boost::thread> m_thread;
+public:
+    server()
+        : m_server(m_io_service)
+    {
+    }
 
-    // msgpack-rpc server
-    msgpack::asiorpc::server server(io_service);
-	server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
+    ~server()
+    {
+		stop();
+    }
 
-    // register callback
-    server.get_dispatcher()->add_handler(&add, "add");
-    server.get_dispatcher()->add_handler(&mul, "mul");
+    void run()
+    {
+        m_server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
 
-    std::cout << "start server..." << std::endl;
-    io_service.run();
-}
+        // register callback
+        m_server.get_dispatcher()->add_handler(&add, "add");
+        m_server.get_dispatcher()->add_handler(&mul, "mul");
+
+        auto service=&m_io_service;
+        m_thread=std::make_shared<boost::thread>([service]{ service->run(); });
+
+        boost::this_thread::sleep( boost::posix_time::milliseconds(300));
+    }
+
+    void stop()
+    {
+		m_io_service.stop();
+		m_thread->join();
+    }
+};
+
 
 static int type_dummy(int, int)
 {
@@ -35,9 +57,8 @@ static int type_dummy(int, int)
 
 int main(int argc, char **argv)
 {
-    // start server
-    boost::thread server_thread(server);
-    boost::this_thread::sleep( boost::posix_time::milliseconds(300));
+    server s;
+    s.run();
 
     // start client
     {

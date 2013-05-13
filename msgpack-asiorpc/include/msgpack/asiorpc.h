@@ -19,6 +19,14 @@ namespace asiorpc {
         std::map<std::string, func> m_handlerMap;
 
     public:
+		dispatcher()
+		{
+		}
+
+		~dispatcher()
+		{
+		}
+
         std::shared_ptr<msgpack::sbuffer> request(::msgpack::rpc::msgid_t msgid, 
                 ::msgpack::object method, ::msgpack::object params)
         {
@@ -99,6 +107,10 @@ namespace asiorpc {
             m_writing(false)
             {
             }
+
+		~session()
+		{
+		}
 
         boost::asio::ip::tcp::socket& socket()
         {

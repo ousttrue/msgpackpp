@@ -8,6 +8,5 @@ https://github.com/msgpack/msgpack-rpc
 
 ToDo
 ----
-* memory leak
 * 非同期クライアント
 
