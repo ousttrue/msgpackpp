@@ -174,6 +174,38 @@ namespace asiorpc {
     };
 
 
+    class request_factory
+    {
+        ::msgpack::rpc::msgid_t m_next_msgid;
+    public:
+        request_factory()
+            : m_next_msgid(1)
+        {
+        }
+
+        ::msgpack::rpc::msgid_t next_msgid()
+        {
+            return m_next_msgid++;
+        }
+
+        // 2
+        template<typename R, typename A1, typename A2>
+        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
+        create(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
+        {
+            return create(std::function<R(A1, A2)>(handler), method, a1, a2);
+        }
+        template<typename R, typename A1, typename A2>
+        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
+        create(std::function<R(A1, A2)>, const std::string &method, A1 a1, A2 a2)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef ::msgpack::type::tuple<A1, A2> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(a1, a2), msgid);
+        }
+    };
+
     class client
     {
         boost::asio::io_service &m_io_service;
