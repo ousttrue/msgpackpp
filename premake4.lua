@@ -22,6 +22,7 @@ configuration "gmake"
 do
     buildoptions {
         "-std=c++0x",
+        "-Wno-deprecated",
     }
 end
 
