@@ -19,19 +19,32 @@ namespace asiorpc {
         std::map<std::string, func> m_handlerMap;
 
     public:
-        std::shared_ptr<msgpack::sbuffer> dispatch(
-                ::msgpack::object msg, ::msgpack::rpc::auto_zone z)
+        std::shared_ptr<msgpack::sbuffer> request(::msgpack::rpc::msgid_t msgid, 
+                ::msgpack::object method, ::msgpack::object params)
         {
-            ::msgpack::rpc::msg_rpc rpc;
-            msg.convert(&rpc);
-            if(rpc.type==::msgpack::rpc::REQUEST){
-                ::msgpack::rpc::msg_request<msgpack::object, msgpack::object> req;
-                msg.convert(&req);
-                return dispatch(req.msgid, req.method, req.param, z);
+            std::string method_name;
+            method.convert(&method_name);
+
+            auto found=m_handlerMap.find(method_name);
+            if(found==m_handlerMap.end()){
+                throw ::msgpack::rpc::no_method_error();
             }
             else{
-                throw ::msgpack::type_error();  // FIXME
+                auto func=found->second;
+                return func(msgid, params);
             }
+        }
+
+        std::shared_ptr<msgpack::sbuffer> response(::msgpack::rpc::msgid_t msgid, 
+                ::msgpack::object result, ::msgpack::object error)
+        {
+            throw ::msgpack::rpc::no_method_error();
+        }
+
+        std::shared_ptr<msgpack::sbuffer> notify(
+				::msgpack::object method, ::msgpack::object params)
+        {
+            throw ::msgpack::rpc::no_method_error();
         }
 
         // 2
@@ -67,22 +80,6 @@ namespace asiorpc {
                         }));
         }
 
-    private:
-        std::shared_ptr<msgpack::sbuffer> dispatch(::msgpack::rpc::msgid_t msgid, 
-                ::msgpack::object method, ::msgpack::object params, ::msgpack::rpc::auto_zone z)
-        {
-            std::string method_name;
-            method.convert(&method_name);
-
-            auto found=m_handlerMap.find(method_name);
-            if(found==m_handlerMap.end()){
-                throw ::msgpack::rpc::no_method_error();
-            }
-            else{
-                auto func=found->second;
-                return func(msgid, params);
-            }
-        }
     };
 
 
@@ -93,9 +90,13 @@ namespace asiorpc {
         char m_data[max_length];
         unpacker m_pac;
         std::shared_ptr<dispatcher> m_dispatcher;
+
+        bool m_writing;
+        std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
     public:
         session(boost::asio::io_service& io_service, std::shared_ptr<dispatcher> dispatcher)
-            : m_socket(io_service), m_pac(1024), m_dispatcher(dispatcher)
+            : m_socket(io_service), m_pac(1024), m_dispatcher(dispatcher),
+            m_writing(false)
             {
             }
 
@@ -104,6 +105,7 @@ namespace asiorpc {
             return m_socket;
         }
 
+        // read connection
         void startRead()
         {
             auto pac=&m_pac;
@@ -127,24 +129,53 @@ namespace asiorpc {
                                 size_t size=pac->parsed_size();
                                 // msgpack message
                                 ::msgpack::object msg = pac->data();
-                                ::msgpack::rpc::auto_zone z(pac->release_zone());
+                                ::msgpack::rpc::msgid_t msgid=0;
                                 try{
-                                    std::shared_ptr<msgpack::sbuffer> result=shared->m_dispatcher->dispatch(msg, z);
-                                    std::cout << "dispatch" << std::endl;
+                                    ::msgpack::rpc::msg_rpc rpc;
+                                    msg.convert(&rpc);
 
-									// for vc
-									auto self2=shared;
+                                    switch(rpc.type) {
+									case ::msgpack::rpc::REQUEST: 
+                                            {
+                                                ::msgpack::rpc::msg_request<object, object> req;
+                                                msg.convert(&req);
+                                                std::shared_ptr<msgpack::sbuffer> result=
+                                                    shared->m_dispatcher->request(
+                                                            req.msgid, req.method, req.param);
+                                                shared->enqueueWrite(result);
+                                            }
+                                            break;
 
-                                    shared->socket().async_write_some(boost::asio::buffer(result->data(), result->size()),
-                                    [self2, result](const boost::system::error_code& error, size_t bytes_transferred){
-                                        std::cout << "write " << bytes_transferred << " bytes" << std::endl;
-                                    });
+                                        case ::msgpack::rpc::RESPONSE: 
+                                            {
+                                                ::msgpack::rpc::msg_response<object, object> res;
+                                                msg.convert(&res);
+                                                shared->m_dispatcher->response(
+                                                        res.msgid, res.result, res.error);
+                                            }
+                                            break;
+
+                                        case ::msgpack::rpc::NOTIFY: 
+                                            {
+                                                ::msgpack::rpc::msg_notify<object, object> req;
+                                                msg.convert(&req);
+                                                shared->m_dispatcher->notify(
+                                                        req.method, req.param);
+                                            }
+                                            break;
+
+                                        default:
+											throw msgpack::rpc::rpc_error("rpc type error");
+                                    }
+
                                 }
-                                catch(...){
-                                    // error
-                                    std::cerr << "error" << std::endl;
+								catch(::msgpack::rpc::rpc_error ex){
+                                    //shared->enqueueWrite(shared->create_error_message(msgid, ex));
                                 }
-                                //
+								catch(...){
+									//shared->enqueueWrite(shared->create_error_message(msgid, ::msgpack::rpc::rpc_error("unknown error")));
+								}
+
                                 pac->reset();
                                 p+=size;
                             }
@@ -154,6 +185,62 @@ namespace asiorpc {
                             shared->startRead();
                         }
                     });
+        }
+
+    private:
+        void enqueueWrite(std::shared_ptr<msgpack::sbuffer> msg)
+        {
+            // lock
+            if(m_writing){
+                // queueing...
+                m_write_queue.push_back(msg);
+            }
+            else{
+                // start aync write
+                m_writing=true;
+                startWrite(msg);
+            }
+        }
+
+        void startWrite(std::shared_ptr<msgpack::sbuffer> msg)
+        {
+            // for vc
+            auto shared=shared_from_this();
+            shared->socket().async_write_some(
+                    boost::asio::buffer(msg->data(), msg->size()),
+                    [shared, msg](
+                        const boost::system::error_code& error, 
+                        size_t bytes_transferred)
+                    {
+                        if(error){
+                            std::cerr << "write error" << std::endl;
+                        }
+
+                        // lock
+                        if(shared->m_write_queue.empty()){
+                            shared->m_writing=false;
+                        }
+                        else{
+                            shared->m_writing=true;
+                            auto next_msg=shared->m_write_queue.front();
+                            shared->m_write_queue.pop_front();
+                            shared->startWrite(next_msg);
+                        }
+                    });
+        }
+
+		template<typename E>
+        std::shared_ptr<msgpack::sbuffer> create_error_message(msgpack::rpc::msgid_t msgid, const E &error)
+        {
+            // error type
+            ::msgpack::rpc::msg_response<msgpack::type::nil, E> msgres(
+                ::msgpack::type::nil(), 
+                error, 
+                msgid);
+            // result
+            auto sbuf=std::make_shared<msgpack::sbuffer>();
+            msgpack::pack(*sbuf, msgres);
+            return sbuf;
         }
     };
 
@@ -184,7 +271,6 @@ namespace asiorpc {
                             std::cerr << "error !" << std::endl;
                         }
                         else{
-                            std::cout << "accepted" << std::endl;
                             new_connection->startRead();
 
                             // next
@@ -265,7 +351,6 @@ namespace asiorpc {
 
             // request
             size_t len=boost::asio::write(m_socket, boost::asio::buffer(sbuf.data(), sbuf.size()));
-            std::cout << "write " << len << " bytes" << std::endl;
 
             // response
             size_t pos=0;
@@ -280,8 +365,6 @@ namespace asiorpc {
                 m_pac.buffer_consumed(pos);
                 if(m_pac.execute()){
                     ::msgpack::object msg = m_pac.data();
-                    //std::cout << "result " << msg << std::endl;
-                    //::msgpack::rpc::auto_zone z(m_pac.release_zone());
                     m_pac.reset();
 
                     ::msgpack::rpc::msg_response<object, object> res;
