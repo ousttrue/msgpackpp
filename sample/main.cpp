@@ -17,8 +17,8 @@ static void server()
     boost::asio::io_service io_service;
 
     // msgpack-rpc server
-    msgpack::asiorpc::server server(io_service, 
-            boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
+    msgpack::asiorpc::server server(io_service);
+	server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
 
     // register callback
     server.get_dispatcher()->add_handler(&add, "add");
@@ -48,8 +48,8 @@ int main(int argc, char **argv)
         std::cout << "connect to... " << endpoint << std::endl;
         client.connect(endpoint);
         std::cout << "done" << std::endl;
-        //std::cout << "call add, 1, 2 = " << client.call(&type_dummy, "add", 1, 2) << std::endl;
-        //std::cout << "call add, 3, 4 = " << client.call(std::function<int(int, int)>(), "add", 3, 4) << std::endl;
+        std::cout << "call add, 1, 2 = " << client.call(&type_dummy, "add", 1, 2) << std::endl;
+        std::cout << "call add, 3, 4 = " << client.call(std::function<int(int, int)>(), "add", 3, 4) << std::endl;
         std::cout << "call mul, 5, 7 = " << client.call(&type_dummy, "mul", 5, 7) << std::endl;
     }
 

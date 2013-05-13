@@ -89,7 +89,7 @@ namespace asiorpc {
         enum { max_length = 1024 };
         char m_data[max_length];
         unpacker m_pac;
-        std::shared_ptr<dispatcher> m_dispatcher;
+        std::weak_ptr<dispatcher> m_dispatcher;
 
         bool m_writing;
         std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
@@ -115,7 +115,11 @@ namespace asiorpc {
                     [shared, pac](const boost::system::error_code &error,
                         size_t bytes_transferred)
                     {
+                        auto dispatcher=shared->m_dispatcher.lock();
                         if (error) {
+                            // todo
+                        }
+                        else if(!dispatcher){
                             // todo
                         }
                         else {
@@ -140,7 +144,7 @@ namespace asiorpc {
                                                 ::msgpack::rpc::msg_request<object, object> req;
                                                 msg.convert(&req);
                                                 std::shared_ptr<msgpack::sbuffer> result=
-                                                    shared->m_dispatcher->request(
+                                                    dispatcher->request(
                                                             req.msgid, req.method, req.param);
                                                 shared->enqueueWrite(result);
                                             }
@@ -150,7 +154,7 @@ namespace asiorpc {
                                             {
                                                 ::msgpack::rpc::msg_response<object, object> res;
                                                 msg.convert(&res);
-                                                shared->m_dispatcher->response(
+                                                dispatcher->response(
                                                         res.msgid, res.result, res.error);
                                             }
                                             break;
@@ -159,7 +163,7 @@ namespace asiorpc {
                                             {
                                                 ::msgpack::rpc::msg_notify<object, object> req;
                                                 msg.convert(&req);
-                                                shared->m_dispatcher->notify(
+                                                dispatcher->notify(
                                                         req.method, req.param);
                                             }
                                             break;
@@ -250,12 +254,35 @@ namespace asiorpc {
         boost::asio::io_service &m_io_service;
         boost::asio::ip::tcp::acceptor m_acceptor;
         std::shared_ptr<dispatcher> m_dispatcher;
+        std::list<std::weak_ptr<session>> m_sessions;
 
     public:
-        server(boost::asio::io_service &io_service, boost::asio::ip::tcp::endpoint endpoint)
-            : m_io_service(io_service), m_acceptor(m_io_service, endpoint), m_dispatcher(new dispatcher)
+        server(boost::asio::io_service &io_service)
+            : m_io_service(io_service), m_acceptor(io_service), m_dispatcher(new dispatcher)
         {
+        }
+                
+        ~server()
+        {
+            for(auto it=m_sessions.begin(); it!=m_sessions.end(); ++it){
+                auto session=it->lock();
+                if(session){
+                    session->socket().close();
+                }
+            }
+        }
+
+        void start(boost::asio::ip::tcp::endpoint endpoint)
+        {
+			m_acceptor.open(endpoint.protocol());
+            m_acceptor.bind(endpoint);
+            m_acceptor.listen();
             start_accept();
+        }
+
+        void stop()
+        {
+            m_acceptor.close();
         }
 
         std::shared_ptr<dispatcher> get_dispatcher(){ return m_dispatcher; }
@@ -265,6 +292,7 @@ namespace asiorpc {
         {
             auto self=this;
             auto new_connection = std::make_shared<session>(m_io_service, m_dispatcher);
+            m_sessions.push_back(new_connection);
             m_acceptor.async_accept(new_connection->socket(),
                     [self, new_connection](const boost::system::error_code& error){
                         if (error){
@@ -320,6 +348,10 @@ namespace asiorpc {
             : m_io_service(io_service), m_socket(m_io_service), m_pac(1024)
         {
         }
+
+		~client()
+		{
+		}
 
         void connect(boost::asio::ip::tcp::endpoint endpoint)
         {

@@ -15,8 +15,8 @@ static void server()
     boost::asio::io_service io_service;
 
     // msgpack-rpc server
-    msgpack::asiorpc::server server(io_service, 
-            boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
+    msgpack::asiorpc::server server(io_service);
+	server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
 
     // register callback
     server.get_dispatcher()->add_handler(&add, "add");
