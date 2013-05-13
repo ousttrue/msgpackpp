@@ -191,12 +191,6 @@ namespace asiorpc {
         // 2
         template<typename R, typename A1, typename A2>
         ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
-        create(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
-        {
-            return create(std::function<R(A1, A2)>(handler), method, a1, a2);
-        }
-        template<typename R, typename A1, typename A2>
-        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
         create(std::function<R(A1, A2)>, const std::string &method, A1 a1, A2 a2)
         {
             ::msgpack::rpc::msgid_t msgid = next_msgid();
@@ -206,11 +200,13 @@ namespace asiorpc {
         }
     };
 
+
     class client
     {
         boost::asio::io_service &m_io_service;
         boost::asio::ip::tcp::socket m_socket;
         unpacker m_pac;
+        request_factory m_request_factory;
 
     public:
         client(boost::asio::io_service &io_service)
@@ -227,16 +223,17 @@ namespace asiorpc {
         template<typename R, typename A1, typename A2>
         R call(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
         {
-            return call(std::function<R(A1, A2)>(handler), method, a1, a2);
+            return request<R>(m_request_factory.create(
+                        std::function<R(A1, A2)>(handler), 
+                        method, a1, a2));
         }
         template<typename R, typename A1, typename A2>
-        R call(std::function<R(A1, A2)>, const std::string &method, A1 a1, A2 a2)
+        R call(std::function<R(A1, A2)> func, const std::string &method, A1 a1, A2 a2)
         {
-            ::msgpack::rpc::msgid_t msgid = 0;
-            typedef type::tuple<const A1&, const A2&> Parameter;
-            ::msgpack::rpc::msg_request<std::string, Parameter> msgreq(method, Parameter(a1, a2), msgid);
+            return request<R>(m_request_factory.create(
+                        func,
+                        method, a1, a2));
 
-            return request<R>(msgreq);
         }
 
         template<typename R, typename Parameter>
