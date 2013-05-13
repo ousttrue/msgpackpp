@@ -8,5 +8,6 @@ https://github.com/msgpack/msgpack-rpc
 
 ToDo
 ----
+* sessionとclientを統合する
 * 非同期クライアント
 

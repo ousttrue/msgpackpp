@@ -350,14 +350,13 @@ namespace asiorpc {
 
     class client
     {
-        boost::asio::io_service &m_io_service;
         boost::asio::ip::tcp::socket m_socket;
         unpacker m_pac;
         request_factory m_request_factory;
 
     public:
         client(boost::asio::io_service &io_service)
-            : m_io_service(io_service), m_socket(m_io_service), m_pac(1024)
+            : m_socket(io_service), m_pac(1024)
         {
         }
 
