@@ -1,47 +1,40 @@
 ------------------------------------------------------------------------------
 -- Project
 ------------------------------------------------------------------------------
-project "sample"
+project "msgpack"
 --language "C"
 language "C++"
---kind "StaticLib"
+kind "StaticLib"
 --kind "SharedLib"
-kind "ConsoleApp"
+--kind "ConsoleApp"
 --kind "WindowedApp"
 
 flags {
     "Unicode",
 }
 files {
-    "*.cpp", "*.h",
+    "src/**.cpp", 
+    "src/**.hpp",
+    "src/**.c",
+    "src/**.h",
 }
 prebuildcommands {
 }
 
 -- compile
 includedirs {
-    "../msgpack/src",
-    "../msgpack-asiorpc/include",
 }
 defines {
 }
 buildoptions {
+    "/TP",
 }
 
 -- link
 libdirs {
 }
 links {
-    "msgpack",
 }
 linkoptions {
 }
-
-configuration "gmake"
-do
-    links {
-        "boost_thread-mt",
-        "boost_system-mt",
-    }
-end
 

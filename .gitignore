@@ -1,4 +1,10 @@
-Makefile
+Makefile*
 debug
 release
 obj
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.vcxproj*
+.deps

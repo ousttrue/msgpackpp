@@ -26,7 +26,18 @@ do
     }
 end
 
+configuration "vs*"
+do
+    includedirs {
+        "$(BOOST_DIR)",
+    }
+    libdirs {
+        "$(BOOST_DIR)/lib",
+    }
+end
+
 configuration {}
 
 include "sample"
-
+include "msgpack-asiorpc"
+include "msgpack"

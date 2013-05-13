@@ -114,8 +114,11 @@ namespace asiorpc {
                                     std::shared_ptr<msgpack::sbuffer> result=dispatcher->dispatch(msg, z);
                                     std::cout << "dispatch" << std::endl;
 
+									// for vc
+									auto self2=self;
+
                                     self->socket().async_write_some(boost::asio::buffer(result->data(), result->size()),
-                                    [self, result](const boost::system::error_code& error, size_t bytes_transferred){
+                                    [self2, result](const boost::system::error_code& error, size_t bytes_transferred){
                                         std::cout << "write " << bytes_transferred << " bytes" << std::endl;
                                     });
                                 }
@@ -156,12 +159,16 @@ namespace asiorpc {
             auto new_connection = std::make_shared<session>(m_io_service, m_dispatcher);
             m_acceptor.async_accept(new_connection->socket(),
                     [self, new_connection](const boost::system::error_code& error){
-                        if (!error){
+                        if (error){
+                            std::cerr << "error !" << std::endl;
+                        }
+                        else{
                             std::cout << "accepted" << std::endl;
                             new_connection->start();
+
+                            // next
+                            self->start_accept();
                         }
-                        // next
-                        self->start_accept();
                     });
         }
     };
