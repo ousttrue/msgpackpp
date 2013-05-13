@@ -38,6 +38,7 @@ end
 
 configuration {}
 
+include "test"
 include "sample"
 include "msgpack-asiorpc"
 include "msgpack"
