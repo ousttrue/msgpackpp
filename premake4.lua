@@ -20,9 +20,17 @@ end
 
 configuration "gmake"
 do
+    defines {
+        "BOOST_TEST_DYN_LINK",
+    }
     buildoptions {
         "-std=c++0x",
         "-Wno-deprecated",
+    }
+    links {
+        "boost_thread-mt",
+        "boost_system-mt",
+        "boost_unit_test_framework-mt",
     }
 end
 
@@ -30,6 +38,9 @@ configuration "vs*"
 do
     includedirs {
         "$(BOOST_DIR)",
+    }
+    buildoptions {
+        "/TP",
     }
     libdirs {
         "$(BOOST_DIR)/lib",

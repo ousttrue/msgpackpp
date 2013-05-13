@@ -27,7 +27,6 @@ includedirs {
 defines {
 }
 buildoptions {
-    "/TP",
 }
 
 -- link
