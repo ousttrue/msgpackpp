@@ -1,5 +1,6 @@
 #pragma once
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 #include <memory>
 #include <functional>
 #include <msgpack/rpc/protocol.h>
@@ -311,7 +312,7 @@ namespace asiorpc {
         template<typename R, typename Parameter>
         std::shared_ptr<request> sendRequest(const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq)
         {
-            auto sbuf=std::make_shared<::msgpack::sbuffer>();
+            auto sbuf=std::make_shared<msgpack::sbuffer>();
             ::msgpack::pack(*sbuf, msgreq);
 
             auto req=std::make_shared<request>();            
