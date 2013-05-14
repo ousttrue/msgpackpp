@@ -43,18 +43,6 @@ namespace asiorpc {
             }
         }
 
-        std::shared_ptr<msgpack::sbuffer> response(::msgpack::rpc::msgid_t msgid, 
-                ::msgpack::object result, ::msgpack::object error)
-        {
-            throw ::msgpack::rpc::no_method_error();
-        }
-
-        std::shared_ptr<msgpack::sbuffer> notify(
-				::msgpack::object method, ::msgpack::object params)
-        {
-            throw ::msgpack::rpc::no_method_error();
-        }
-
         // 2
         template<typename R, typename A1, typename A2>
         void add_handler(R(*handler)(A1, A2), const std::string &method)
@@ -117,6 +105,50 @@ namespace asiorpc {
     };
 
 
+    class request
+    {
+        enum STATUS_TYPE
+        {
+            STATUS_WAIT,
+            STATUS_RECEIVED,
+            STATUS_ERROR,
+        };
+        STATUS_TYPE m_status;
+        ::msgpack::object m_result;
+        ::msgpack::object m_error;
+    public:
+        request()
+            : m_status(STATUS_WAIT)
+        {
+        }
+
+        void set_result(const ::msgpack::object &result)
+        {
+            m_result=result;
+            m_status=STATUS_RECEIVED;
+        }
+
+        void set_error(const ::msgpack::object &error)
+        {
+            m_error=error;
+            m_status=STATUS_ERROR;
+        }
+
+        // blocking
+		template<typename R>
+        R get_sync()
+        {
+            while(m_status==STATUS_WAIT)
+            {
+                boost::this_thread::sleep(boost::posix_time::milliseconds(300));
+            }
+			R value;
+			m_result.convert(&value);
+			return value;
+        }
+    };
+
+
     class session: public std::enable_shared_from_this<session>
     {
         request_factory m_request_factory;
@@ -128,41 +160,58 @@ namespace asiorpc {
 
         bool m_writing;
         std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
-    public:
+		std::map<msgpack::rpc::msgid_t, std::shared_ptr<request>> m_requestMap;
+
+        // must shard_ptr
         session(boost::asio::io_service& io_service, 
                 std::shared_ptr<dispatcher> d=std::shared_ptr<dispatcher>())
             : m_socket(io_service), m_pac(1024), m_dispatcher(d),
             m_writing(false)
             {
             }
+ public:
 
 		~session()
 		{
 		}
+
+        static std::shared_ptr<session> create(boost::asio::io_service &io_service,
+                std::shared_ptr<dispatcher> d=std::shared_ptr<dispatcher>())
+        {
+            return std::shared_ptr<session>(new session(io_service, d));
+        }
 
         boost::asio::ip::tcp::socket& socket()
         {
             return m_socket;
         }
 
-        // synchronous connect
         void connect(boost::asio::ip::tcp::endpoint endpoint)
         {
-           m_socket.connect(endpoint); 
+            auto shared=shared_from_this();
+            m_socket.async_connect(endpoint, [shared](const boost::system::error_code &error){
+                    if(error){
+                        std::cerr << "error !" << std::endl;
+                    }
+                    else{
+                        shared->startRead();
+                    }
+
+                    }); 
         }
 
         // 2
         template<typename R, typename A1, typename A2>
-        R call(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
+        std::shared_ptr<request> call(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
         {
-            return request<R>(m_request_factory.create(
+            return sendRequest<R>(m_request_factory.create(
                         std::function<R(A1, A2)>(handler), 
                         method, a1, a2));
         }
         template<typename R, typename A1, typename A2>
-        R call(std::function<R(A1, A2)> func, const std::string &method, A1 a1, A2 a2)
+        std::shared_ptr<request> call(std::function<R(A1, A2)> func, const std::string &method, A1 a1, A2 a2)
         {
-            return request<R>(m_request_factory.create(
+            return sendRequest<R>(m_request_factory.create(
                         func,
                         method, a1, a2));
 
@@ -180,9 +229,7 @@ namespace asiorpc {
                     {
                         auto dispatcher=shared->m_dispatcher.lock();
                         if (error) {
-                            // todo
-                        }
-                        else if(!dispatcher){
+							int a=0;
                             // todo
                         }
                         else {
@@ -217,8 +264,15 @@ namespace asiorpc {
                                             {
                                                 ::msgpack::rpc::msg_response<object, object> res;
                                                 msg.convert(&res);
-                                                dispatcher->response(
-                                                        res.msgid, res.result, res.error);
+                                                auto found=shared->m_requestMap.find(res.msgid);
+                                                if(found!=shared->m_requestMap.end()){
+													// ToDo: error check
+													found->second->set_result(res.result);
+                                                }
+												else{
+													// ToDo:error
+													int a=0;
+												}
                                             }
                                             break;
 
@@ -226,8 +280,7 @@ namespace asiorpc {
                                             {
                                                 ::msgpack::rpc::msg_notify<object, object> req;
                                                 msg.convert(&req);
-                                                dispatcher->notify(
-                                                        req.method, req.param);
+                                                        //req.method, req.param);
                                             }
                                             break;
 
@@ -255,14 +308,21 @@ namespace asiorpc {
         }
 
     private:
-        // request
         template<typename R, typename Parameter>
-        R request(const ::msgpack::rpc::msg_request<std::string, Parameter> msgreq)
+        std::shared_ptr<request> sendRequest(const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq)
         {
-            ::msgpack::sbuffer sbuf;
-            ::msgpack::pack(sbuf, msgreq);
+            auto sbuf=std::make_shared<::msgpack::sbuffer>();
+            ::msgpack::pack(*sbuf, msgreq);
 
-            // request
+            auto req=std::make_shared<request>();            
+            m_requestMap.insert(std::make_pair(msgreq.msgid, req));
+
+            enqueueWrite(sbuf);
+
+            return req;
+        }
+
+            /*
             size_t len=boost::asio::write(m_socket, boost::asio::buffer(sbuf.data(), sbuf.size()));
 
             // response
@@ -299,6 +359,7 @@ namespace asiorpc {
 
             return R();
         }
+            */
 
         // write
         void enqueueWrite(std::shared_ptr<msgpack::sbuffer> msg)
@@ -309,7 +370,7 @@ namespace asiorpc {
                 m_write_queue.push_back(msg);
             }
             else{
-                // start aync write
+                // start async write
                 m_writing=true;
                 startWrite(msg);
             }
@@ -400,7 +461,7 @@ namespace asiorpc {
         void start_accept()
         {
             auto self=this;
-            auto new_connection = std::make_shared<session>(m_io_service, m_dispatcher);
+            auto new_connection = session::create(m_io_service, m_dispatcher);
             m_sessions.push_back(new_connection);
             m_acceptor.async_accept(new_connection->socket(),
                     [self, new_connection](const boost::system::error_code& error){

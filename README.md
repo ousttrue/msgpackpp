@@ -8,6 +8,5 @@ https://github.com/msgpack/msgpack-rpc
 
 ToDo
 ----
-* class名をキャメルケースにする
-* 非同期クライアント
+* 名前被りがつらいのでclass名(ucc), 関数名(lcc), 変数名(スネーク)で
 

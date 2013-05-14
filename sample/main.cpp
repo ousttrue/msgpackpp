@@ -65,16 +65,28 @@ int main(int argc, char **argv)
         boost::asio::io_service io_service;
         auto endpoint=boost::asio::ip::tcp::endpoint(
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT);
-        msgpack::asiorpc::session client(io_service); 
-        std::cout << "connect to... " << endpoint << std::endl;
-        client.connect(endpoint);
-        std::cout << "done" << std::endl;
+        auto client=msgpack::asiorpc::session::create(io_service); 
+        client->connect(endpoint);
+
+		// run background
+		boost::thread clinet_thread([&io_service](){ io_service.run(); });
+
+        /*
         std::cout << "call add, 1, 2 = " << client.call(&type_dummy, "add", 1, 2) << std::endl;
         std::cout << "call add, 3, 4 = " << client.call(std::function<int(int, int)>(), "add", 3, 4) << std::endl;
         std::cout << "call mul, 5, 7 = " << client.call(&type_dummy, "mul", 5, 7) << std::endl;
+        */
+
+		boost::this_thread::sleep( boost::posix_time::milliseconds(1000));
+
+        auto request=client->call(&type_dummy, "add", 1, 2);
+
+        std::cout << request->get_sync<int>() << std::endl;
+
+        io_service.stop();
+        clinet_thread.join();
     }
 
-    boost::this_thread::sleep( boost::posix_time::milliseconds(300));
 
     return 0;
 }
