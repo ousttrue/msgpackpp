@@ -1,11 +1,11 @@
 #include <boost/test/unit_test.hpp> 
 
-#include <msgpack/asiorpc.h>
+#include <msgpack/rpc/asio.h>
 #include <boost/thread.hpp>
 
 BOOST_AUTO_TEST_CASE( request2 )
 {
-    msgpack::asiorpc::request_factory factory;
+    msgpack::rpc::asio::request_factory factory;
 
 
     {

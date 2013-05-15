@@ -9,7 +9,8 @@
 
 
 namespace msgpack {
-namespace asiorpc {
+namespace rpc {
+namespace asio {
 
 
     class dispatcher
@@ -100,7 +101,6 @@ namespace asiorpc {
             typedef decltype(helper0(&functor::operator())) R;
             typedef decltype(helper1(&functor::operator())) A1;
             typedef decltype(helper2(&functor::operator())) A2;
-        /*
             add_handler(std::function<R(A1, A2)>(handler), method);
         }
         template<typename R, typename A1, typename A2>
@@ -111,7 +111,6 @@ namespace asiorpc {
         template<typename R, typename A1, typename A2>
         void add_handler(std::function<R(A1, A2)> handler, const std::string &method)
         {
-        */
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
@@ -540,4 +539,4 @@ namespace asiorpc {
 
 
 
-}}
+}}}

@@ -1,6 +1,6 @@
 #include <boost/test/unit_test.hpp> 
 
-#include <msgpack/asiorpc.h>
+#include <msgpack/rpc/asio.h>
 #include <boost/thread.hpp>
 
 static int add(int a, int b)
@@ -14,14 +14,14 @@ BOOST_AUTO_TEST_CASE( pipeline )
 
     // server
     boost::asio::io_service server_io;
-    msgpack::asiorpc::server server(server_io);
+    msgpack::rpc::asio::server server(server_io);
     server.get_dispatcher()->add_handler(&add, "add");
     server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io]{ server_io.run(); });
 
     // client
     boost::asio::io_service client_io;
-    auto client=msgpack::asiorpc::session::create(client_io); 
+    auto client=msgpack::rpc::asio::session::create(client_io); 
     client->connect(boost::asio::ip::tcp::endpoint(
                 boost::asio::ip::address::from_string("127.0.0.1"), PORT));
     boost::thread client_thread([&client_io](){ client_io.run(); });
