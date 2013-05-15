@@ -8,7 +8,14 @@ https://github.com/msgpack/msgpack-rpc
 
 ToDo
 ----
-* namespaceをmsgpack::asiorpcからmsgpack::rpc::asioに変更する
+* 1引数関数
+* 3引数関数
+* 4引数関数
+* 5引数関数
+* 6引数関数
+* 7引数関数
+* 8引数関数
+* 9引数関数
 
 Install
 -------
