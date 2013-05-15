@@ -44,7 +44,65 @@ namespace asiorpc {
             }
         }
 
+        // ret
+        template<typename F, typename Ret, typename... Rest>
+            Ret
+            helper0(Ret (F::*)(Rest...));
+
+        template<typename F, typename Ret, typename... Rest>
+            Ret
+            helper0(Ret (F::*)(Rest...) const);
+
+        /*
+        template<typename F>
+            struct result_type {
+                typedef delctype( helper0(&F::operator()) ) type;
+            };
+            */
+
+        // 1
+        // http://stackoverflow.com/questions/6512019/can-we-get-the-type-of-a-lambda-argument
+        template<typename F, typename Ret, typename A1, typename... Rest>
+            A1
+            helper1(Ret (F::*)(A1, Rest...));
+
+        template<typename F, typename Ret, typename A1, typename... Rest>
+            A1
+            helper1(Ret (F::*)(A1, Rest...) const);
+
+        /*
+        template<typename F>
+            struct first_argument {
+                typedef delctype( helper1(&F::operator()) ) type;
+            };
+            */
+
         // 2
+        template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
+            A2
+            helper2(Ret (F::*)(A1, A2, Rest...));
+
+        template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
+            A2
+            helper2(Ret (F::*)(A1, A2, Rest...) const);
+
+        /*
+        template<typename F>
+            struct second_argument {
+                typedef delctype( helper2(&F::operator()) ) type;
+            };
+            */
+
+        template<typename F>
+        void add_handler(F handler, const std::string &method)
+        {
+            typedef decltype(handler) functor;
+            typedef decltype(helper0(&functor::operator())) R;
+            typedef decltype(helper1(&functor::operator())) A1;
+            typedef decltype(helper2(&functor::operator())) A2;
+        /*
+            add_handler(std::function<R(A1, A2)>(handler), method);
+        }
         template<typename R, typename A1, typename A2>
         void add_handler(R(*handler)(A1, A2), const std::string &method)
         {
@@ -53,6 +111,7 @@ namespace asiorpc {
         template<typename R, typename A1, typename A2>
         void add_handler(std::function<R(A1, A2)> handler, const std::string &method)
         {
+        */
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>

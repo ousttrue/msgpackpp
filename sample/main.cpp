@@ -9,8 +9,7 @@ int main(int argc, char **argv)
     // server
     boost::asio::io_service server_io;
     msgpack::asiorpc::server server(server_io);
-    std::function<int(int, int)> func1=[](int a, int b)->int{ return a+b; };
-    server.get_dispatcher()->add_handler(func1, "add");
+    server.get_dispatcher()->add_handler([](int a, int b)->int{ return a+b; }, "add");
     std::function<float(float, float)> func2=[](float a, float b)->float{ return a*b; };
     server.get_dispatcher()->add_handler(func2, "mul");
     server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
