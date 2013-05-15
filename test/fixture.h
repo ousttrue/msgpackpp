@@ -9,7 +9,7 @@ struct Fixture
     Fixture(int port) 
         : server(server_io)
     {
-        server.get_dispatcher()->add_handler(&Fixture::add, "add");
+        server.get_dispatcher()->add_handler("add", &Fixture::add);
         server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
         server_thread=std::make_shared<boost::thread>([&server_io]{ server_io.run(); });
     }   

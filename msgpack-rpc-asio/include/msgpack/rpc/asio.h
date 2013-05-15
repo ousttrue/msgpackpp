@@ -95,21 +95,21 @@ namespace asio {
             */
 
         template<typename F>
-        void add_handler(F handler, const std::string &method)
+        void add_handler(const std::string &method, F handler)
         {
             typedef decltype(handler) functor;
             typedef decltype(helper0(&functor::operator())) R;
             typedef decltype(helper1(&functor::operator())) A1;
             typedef decltype(helper2(&functor::operator())) A2;
-            add_handler(std::function<R(A1, A2)>(handler), method);
+            add_handler(method, std::function<R(A1, A2)>(handler));
         }
         template<typename R, typename A1, typename A2>
-        void add_handler(R(*handler)(A1, A2), const std::string &method)
+        void add_handler(const std::string &method, R(*handler)(A1, A2))
         {
-            add_handler(std::function<R(A1, A2)>(handler), method);
+            add_handler(method, std::function<R(A1, A2)>(handler));
         }
         template<typename R, typename A1, typename A2>
-        void add_handler(std::function<R(A1, A2)> handler, const std::string &method)
+        void add_handler(const std::string &method, std::function<R(A1, A2)> handler)
         {
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, 
