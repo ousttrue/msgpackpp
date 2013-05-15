@@ -501,7 +501,7 @@ namespace asio {
             }
         }
 
-        void start(boost::asio::ip::tcp::endpoint endpoint)
+        void listen(boost::asio::ip::tcp::endpoint endpoint)
         {
 			m_acceptor.open(endpoint.protocol());
             m_acceptor.bind(endpoint);

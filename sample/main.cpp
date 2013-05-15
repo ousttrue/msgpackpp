@@ -12,7 +12,7 @@ int main(int argc, char **argv)
     server.get_dispatcher()->add_handler([](int a, int b)->int{ return a+b; }, "add");
     std::function<float(float, float)> func2=[](float a, float b)->float{ return a*b; };
     server.get_dispatcher()->add_handler(func2, "mul");
-    server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
+    server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io](){ server_io.run(); });
 
     // client

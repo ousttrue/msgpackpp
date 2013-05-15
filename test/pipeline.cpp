@@ -3,21 +3,13 @@
 #include <msgpack/rpc/asio.h>
 #include <boost/thread.hpp>
 
-static int add(int a, int b)
-{
-    return a+b;
-}
+#include "fixture.h"
 
 BOOST_AUTO_TEST_CASE( pipeline )
 {
     const static int PORT=8070;
 
-    // server
-    boost::asio::io_service server_io;
-    msgpack::rpc::asio::server server(server_io);
-    server.get_dispatcher()->add_handler(&add, "add");
-    server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
-    boost::thread server_thread([&server_io]{ server_io.run(); });
+    Fixture fixture(PORT);
 
     // client
     boost::asio::io_service client_io;
@@ -34,7 +26,5 @@ BOOST_AUTO_TEST_CASE( pipeline )
 
     client_io.stop();
     client_thread.join();
-    server_io.stop();
-    server_thread.join();
 }
 

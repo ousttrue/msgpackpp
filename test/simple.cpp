@@ -3,10 +3,11 @@
 #include <msgpack/rpc/asio.h>
 #include "fixture.h"
 
-const static int PORT=8070;
 
 BOOST_AUTO_TEST_CASE( func2 )
 {
+    const static int PORT=8070;
+
     Fixture f(PORT);
 
     // client
