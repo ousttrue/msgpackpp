@@ -3,6 +3,29 @@
 #include <msgpack/rpc/asio.h>
 #include <boost/thread.hpp>
 
+BOOST_AUTO_TEST_CASE( request0 )
+{
+    msgpack::rpc::asio::request_factory factory;
+
+    {
+        auto request=factory.create("count");
+        BOOST_CHECK_EQUAL(request.msgid, 1);
+        BOOST_CHECK_EQUAL(request.method, "count");
+    }
+}
+
+BOOST_AUTO_TEST_CASE( request1 )
+{
+    msgpack::rpc::asio::request_factory factory;
+
+    {
+        auto request=factory.create("sin", 3.14);
+        BOOST_CHECK_EQUAL(request.msgid, 1);
+        BOOST_CHECK_EQUAL(request.method, "sin");
+        BOOST_CHECK_EQUAL(request.param.get<0>(), 3.14);
+    }
+}
+
 BOOST_AUTO_TEST_CASE( request2 )
 {
     msgpack::rpc::asio::request_factory factory;

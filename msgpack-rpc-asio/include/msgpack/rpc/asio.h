@@ -151,6 +151,27 @@ namespace asio {
             return m_next_msgid++;
         }
 
+        // ToDo: std::tuple variable length...
+
+        // 0
+        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<>> 
+        create(const std::string &method)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef ::msgpack::type::tuple<> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(), msgid);
+        }
+        // 1
+        template<typename A1>
+        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1>> 
+        create(const std::string &method, A1 a1)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef ::msgpack::type::tuple<A1> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(a1), msgid);
+        }
         // 2
         template<typename A1, typename A2>
         ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
