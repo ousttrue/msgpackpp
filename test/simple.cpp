@@ -18,8 +18,9 @@ BOOST_AUTO_TEST_CASE( func2 )
     boost::thread client_thread([&client_io](){ client_io.run(); });
 
     // request
-    auto request=client->call(std::function<int(int, int)>(), "add", 3, 4);
-    BOOST_CHECK_EQUAL(request->get_sync<int>(), 7);
+    std::shared_ptr<msgpack::rpc::asio::func_call> req=client->call("add", 3, 4);
+    int result;
+    BOOST_CHECK_EQUAL(req->sync().convert(&result), 7);
 
     client_io.stop();
     client_thread.join();

@@ -26,8 +26,13 @@ int main(int argc, char **argv)
     auto request1=client->call(std::function<int(int, int)>(), "add", 1, 2);
     auto request2=client->call(std::function<float(float, float)>(), "mul", 1.2f, 5.0f);
 
-    std::cout << request1->get_sync<int>() << std::endl;
-    std::cout << request2->get_sync<float>() << std::endl;
+    int result1;
+    request1->sync().convert(&result1);
+    float result2;
+    request2->sync().convert(&result2);
+
+    std::cout << result1 << std::endl;
+    std::cout << result2 << std::endl;
 
     client_io.stop();
     clinet_thread.join();

@@ -152,9 +152,9 @@ namespace asio {
         }
 
         // 2
-        template<typename R, typename A1, typename A2>
+        template<typename A1, typename A2>
         ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
-        create(std::function<R(A1, A2)>, const std::string &method, A1 a1, A2 a2)
+        create(const std::string &method, A1 a1, A2 a2)
         {
             ::msgpack::rpc::msgid_t msgid = next_msgid();
             typedef ::msgpack::type::tuple<A1, A2> Parameter;
@@ -164,7 +164,7 @@ namespace asio {
     };
 
 
-    class request
+    class func_call
     {
         enum STATUS_TYPE
         {
@@ -176,7 +176,7 @@ namespace asio {
         ::msgpack::object m_result;
         ::msgpack::object m_error;
     public:
-        request()
+        func_call()
             : m_status(STATUS_WAIT)
         {
         }
@@ -194,16 +194,26 @@ namespace asio {
         }
 
         // blocking
-		template<typename R>
-        R get_sync()
+        // ToDo: boost::condition
+        func_call& sync()
         {
             while(m_status==STATUS_WAIT)
             {
                 boost::this_thread::sleep(boost::posix_time::milliseconds(300));
             }
-			R value;
-			m_result.convert(&value);
-			return value;
+            return *this;
+        }
+
+        template<typename R>
+        R& convert(R *value)const
+        {
+            if(m_status==STATUS_RECEIVED){
+                m_result.convert(value);
+                return *value;
+            }
+            else{
+                throw rpc_error("not ready");
+            }
         }
     };
 
@@ -219,7 +229,7 @@ namespace asio {
 
         bool m_writing;
         std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
-		std::map<msgpack::rpc::msgid_t, std::shared_ptr<request>> m_requestMap;
+		std::map<msgpack::rpc::msgid_t, std::shared_ptr<func_call>> m_requestMap;
 
         // must shard_ptr
         session(boost::asio::io_service& io_service, 
@@ -260,20 +270,11 @@ namespace asio {
         }
 
         // 2
-        template<typename R, typename A1, typename A2>
-        std::shared_ptr<request> call(R(*handler)(A1, A2), const std::string &method, A1 a1, A2 a2)
+        template<typename A1, typename A2>
+        std::shared_ptr<func_call> call(const std::string &method, A1 a1, A2 a2)
         {
-            return sendRequest<R>(m_request_factory.create(
-                        std::function<R(A1, A2)>(handler), 
-                        method, a1, a2));
-        }
-        template<typename R, typename A1, typename A2>
-        std::shared_ptr<request> call(std::function<R(A1, A2)> func, const std::string &method, A1 a1, A2 a2)
-        {
-            return sendRequest<R>(m_request_factory.create(
-                        func,
-                        method, a1, a2));
-
+            auto request=m_request_factory.create(method, a1, a2);
+            return sendRequest(request);
         }
 
         // read connection
@@ -367,13 +368,13 @@ namespace asio {
         }
 
     private:
-        template<typename R, typename Parameter>
-        std::shared_ptr<request> sendRequest(const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq)
+        template<typename Parameter>
+        std::shared_ptr<func_call> sendRequest(const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq)
         {
             auto sbuf=std::make_shared<msgpack::sbuffer>();
             ::msgpack::pack(*sbuf, msgreq);
 
-            auto req=std::make_shared<request>();            
+            auto req=std::make_shared<func_call>();            
             m_requestMap.insert(std::make_pair(msgreq.msgid, req));
 
             enqueueWrite(sbuf);
