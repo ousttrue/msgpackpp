@@ -21,7 +21,7 @@ prebuildcommands {
 -- compile
 includedirs {
     "../msgpack/src",
-    "../msgpack-asiorpc/include",
+    "../msgpack-rpc-asio/include",
 }
 defines {
 }

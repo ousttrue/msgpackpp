@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- Solution
 ------------------------------------------------------------------------------
-solution "msgpack-asiorpc"
+solution "msgpack-rpc-asio"
 configurations { "Debug", "Release" }
 
 configuration "Debug"
@@ -51,5 +51,5 @@ configuration {}
 
 include "test"
 include "sample"
-include "msgpack-asiorpc"
+include "msgpack-rpc-asio"
 include "msgpack"
