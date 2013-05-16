@@ -26,24 +26,7 @@ namespace msgpack {
         typedef decltype(helper0(&func_type::operator())) type;
     };
 
-    // 1
-    template<typename F, typename Ret, typename A1, typename... Rest>
-        A1
-        helper1(Ret (F::*)(A1, Rest...));
-
-    template<typename F, typename Ret, typename A1, typename... Rest>
-        A1
-        helper1(Ret (F::*)(A1, Rest...) const);
-
-    // 2
-    template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
-        A2
-        helper2(Ret (F::*)(A1, A2, Rest...));
-
-    template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
-        A2
-        helper2(Ret (F::*)(A1, A2, Rest...) const);
-
+    // std::tuple pack/unpack
     // 0
     template <typename Stream>
     inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<>& t)
@@ -112,6 +95,7 @@ namespace msgpack {
 namespace rpc {
 namespace asio {
 
+    // handler call
     // 0
     template<typename F>
     auto call_with_tuple(const F &handler, std::tuple<> &args)->typename result_type<F>::type
@@ -458,45 +442,6 @@ namespace asio {
 
             return req;
         }
-
-            /*
-            size_t len=boost::asio::write(m_socket, boost::asio::buffer(sbuf.data(), sbuf.size()));
-
-            // response
-            size_t pos=0;
-            for (;;)
-            {
-                std::vector<char> buf(128);
-                boost::system::error_code error;
-
-                size_t len = m_socket.read_some(boost::asio::buffer(buf), error);
-                memcpy(m_pac.buffer()+pos, &buf[0], len);
-                pos+=len;
-                m_pac.buffer_consumed(pos);
-                if(m_pac.execute()){
-                    ::msgpack::object msg = m_pac.data();
-                    m_pac.reset();
-
-                    ::msgpack::rpc::msg_response<object, object> res;
-                    msg.convert(&res);
-
-                    R value;
-                    res.result.convert(&value);
-                    return value;
-                }
-
-                if (error == boost::asio::error::eof){
-                    break; // Connection closed cleanly by peer.
-                }
-                else if (error){
-                    throw boost::system::system_error(error); // Some other error.
-                }
-
-            }
-
-            return R();
-        }
-            */
 
         // write
         void enqueueWrite(std::shared_ptr<msgpack::sbuffer> msg)
