@@ -27,6 +27,7 @@ include/msgpack/rpc/types.h
 
 Requied
 -------
+* gcc-4.5.4/vc2010
 * msgpack
 * boost
 
