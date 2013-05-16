@@ -22,7 +22,7 @@ BOOST_AUTO_TEST_CASE( request1 )
         auto request=factory.create("sin", 3.14);
         BOOST_CHECK_EQUAL(request.msgid, 1);
         BOOST_CHECK_EQUAL(request.method, "sin");
-        BOOST_CHECK_EQUAL(request.param.get<0>(), 3.14);
+        BOOST_CHECK_EQUAL(std::get<0>(request.param), 3.14);
     }
 }
 
@@ -35,15 +35,15 @@ BOOST_AUTO_TEST_CASE( request2 )
         auto request=factory.create("add", 1, 2);
         BOOST_CHECK_EQUAL(request.msgid, 1);
         BOOST_CHECK_EQUAL(request.method, "add");
-        BOOST_CHECK_EQUAL(request.param.get<0>(), 1);
-        BOOST_CHECK_EQUAL(request.param.get<1>(), 2);
+        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1);
+        BOOST_CHECK_EQUAL(std::get<1>(request.param), 2);
     }
     {
         auto request=factory.create("mul", 1.0f, 0.5f);
         BOOST_CHECK_EQUAL(request.msgid, 2);
         BOOST_CHECK_EQUAL(request.method, "mul");
-        BOOST_CHECK_EQUAL(request.param.get<0>(), 1.0f);
-        BOOST_CHECK_EQUAL(request.param.get<1>(), 0.5f);
+        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1.0f);
+        BOOST_CHECK_EQUAL(std::get<1>(request.param), 0.5f);
     }
 }
 

@@ -9,6 +9,39 @@
 
 
 namespace msgpack {
+
+    // 0
+    template <typename Stream>
+    inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<>& t)
+    {
+        o.pack_array(0);
+    }
+    // 1
+    template <typename Stream, typename A1>
+    inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<A1>& t)
+    {
+        o.pack_array(1);
+        o.pack(std::get<0>(t));
+    }
+    // 2
+    template <typename Stream, typename A1, typename A2>
+    inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<A1, A2>& t)
+    {
+        o.pack_array(2);
+        o.pack(std::get<0>(t));
+        o.pack(std::get<1>(t));
+    }
+    // 3
+    template <typename Stream, typename A1, typename A2, typename A3>
+    inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<A1, A2, A3>& t)
+    {
+        o.pack_array(3);
+        o.pack(std::get<0>(t));
+        o.pack(std::get<1>(t));
+        o.pack(std::get<2>(t));
+    }
+
+
 namespace rpc {
 namespace asio {
 
@@ -154,31 +187,31 @@ namespace asio {
         // ToDo: std::tuple variable length...
 
         // 0
-        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<>> 
+        ::msgpack::rpc::msg_request<std::string, std::tuple<>> 
         create(const std::string &method)
         {
             ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef ::msgpack::type::tuple<> Parameter;
+            typedef std::tuple<> Parameter;
             return ::msgpack::rpc::msg_request<std::string, Parameter>(
                     method, Parameter(), msgid);
         }
         // 1
         template<typename A1>
-        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1>> 
+        ::msgpack::rpc::msg_request<std::string, std::tuple<A1>> 
         create(const std::string &method, A1 a1)
         {
             ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef ::msgpack::type::tuple<A1> Parameter;
+            typedef std::tuple<A1> Parameter;
             return ::msgpack::rpc::msg_request<std::string, Parameter>(
                     method, Parameter(a1), msgid);
         }
         // 2
         template<typename A1, typename A2>
-        ::msgpack::rpc::msg_request<std::string, ::msgpack::type::tuple<A1, A2>> 
+        ::msgpack::rpc::msg_request<std::string, std::tuple<A1, A2>> 
         create(const std::string &method, A1 a1, A2 a2)
         {
             ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef ::msgpack::type::tuple<A1, A2> Parameter;
+            typedef std::tuple<A1, A2> Parameter;
             return ::msgpack::rpc::msg_request<std::string, Parameter>(
                     method, Parameter(a1, a2), msgid);
         }
