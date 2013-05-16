@@ -10,6 +10,22 @@
 
 namespace msgpack {
 
+    // ret
+    template<typename F, typename Ret, typename... Rest>
+        Ret
+        helper0(Ret (F::*)(Rest...));
+
+    template<typename F, typename Ret, typename... Rest>
+        Ret
+        helper0(Ret (F::*)(Rest...) const);
+
+    template<typename F>
+    struct result_type
+    {
+        typedef decltype(F()) func_type;
+        typedef decltype(helper0(&func_type::operator())) type;
+    };
+
     // 0
     template <typename Stream>
     inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<>& t)
@@ -41,10 +57,30 @@ namespace msgpack {
         o.pack(std::get<2>(t));
     }
 
+    // 2
+    template <typename A1, typename A2>
+    inline std::tuple<A1, A2>& operator>> (object o, std::tuple<A1, A2>& t)
+    {
+        if(o.type != type::ARRAY) { throw type_error(); }
+        if(o.via.array.size > 0) {
+            object* p = o.via.array.ptr;
+            p->convert(&std::get<0>(t));
+            ++p;
+            p->convert(&std::get<1>(t));
+        }
+        return t;
+    }
+
 
 namespace rpc {
 namespace asio {
 
+    // 2
+    template<typename F, typename A1, typename A2>
+    auto call_with_tuple(const F &handler, std::tuple<A1, A2> &args)->typename result_type<F>::type
+    {
+        return handler(std::get<0>(args), std::get<1>(args));
+    }
 
     class dispatcher
     {
@@ -77,15 +113,6 @@ namespace asio {
                 return func(msgid, params);
             }
         }
-
-        // ret
-        template<typename F, typename Ret, typename... Rest>
-            Ret
-            helper0(Ret (F::*)(Rest...));
-
-        template<typename F, typename Ret, typename... Rest>
-            Ret
-            helper0(Ret (F::*)(Rest...) const);
 
         /*
         template<typename F>
@@ -141,22 +168,22 @@ namespace asio {
         {
             add_handler(method, std::function<R(A1, A2)>(handler));
         }
-        template<typename R, typename A1, typename A2>
-        void add_handler(const std::string &method, std::function<R(A1, A2)> handler)
+        template<typename R, typename ...A>
+        void add_handler(const std::string &method, std::function<R(A...)> handler)
         {
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
                             // extract args
-                            ::msgpack::type::tuple<A1, A2> params;
+                            std::tuple<A...> params;
                             msg_params.convert(&params);
+
+                            // call
+                            R result=call_with_tuple(handler, params);
+
                             // error type
                             typedef ::msgpack::type::nil Error;
-                            auto result=handler(
-                                params.template get<0>(), 
-                                params.template get<1>()
-                                );
                             ::msgpack::rpc::msg_response<R&, Error> msgres(
                                 result, 
                                 msgpack::type::nil(), 
