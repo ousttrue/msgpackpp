@@ -10,14 +10,32 @@
 
 namespace msgpack {
 
-    // ret
-    template<typename F, typename Ret, typename... Rest>
+    // ret 0
+    template<typename F, typename Ret>
         Ret
-        helper0(Ret (F::*)(Rest...));
+        helper0(Ret (F::*)());
 
-    template<typename F, typename Ret, typename... Rest>
+    template<typename F, typename Ret>
         Ret
-        helper0(Ret (F::*)(Rest...) const);
+        helper0(Ret (F::*)() const);
+
+    // ret 1
+    template<typename F, typename Ret, typename A1>
+        Ret
+        helper0(Ret (F::*)(A1));
+
+    template<typename F, typename Ret, typename A1>
+        Ret
+        helper0(Ret (F::*)(A1) const);
+
+    // ret 2
+    template<typename F, typename Ret, typename A1, typename A2>
+        Ret
+        helper0(Ret (F::*)(A1, A2));
+
+    template<typename F, typename Ret, typename A1, typename A2>
+        Ret
+        helper0(Ret (F::*)(A1, A2) const);
 
     template<typename F>
     struct result_type
