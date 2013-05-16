@@ -18,6 +18,12 @@ BOOST_AUTO_TEST_CASE( dispatcher0 )
 
     // function pointer
     dispatcher->add_handler("fp", &zero);
+
+    // lambda
+    dispatcher->add_handler("lambda", [](){ return 0; });
+
+    // std::function
+    dispatcher->add_handler("std::function", std::function<int()>(zero));
 }
 
 // 1
@@ -35,6 +41,12 @@ BOOST_AUTO_TEST_CASE( dispatcher1 )
 
     // function pointer
     dispatcher->add_handler("fp", &unary);
+
+    // lambda
+    dispatcher->add_handler("lambda", [](int a){ return a; });
+
+    // std::function
+    dispatcher->add_handler("std::function", std::function<bool(double)>(unary));
 }
 
 // 2

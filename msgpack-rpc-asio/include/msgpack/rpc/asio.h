@@ -26,6 +26,24 @@ namespace msgpack {
         typedef decltype(helper0(&func_type::operator())) type;
     };
 
+    // 1
+    template<typename F, typename Ret, typename A1, typename... Rest>
+        A1
+        helper1(Ret (F::*)(A1, Rest...));
+
+    template<typename F, typename Ret, typename A1, typename... Rest>
+        A1
+        helper1(Ret (F::*)(A1, Rest...) const);
+
+    // 2
+    template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
+        A2
+        helper2(Ret (F::*)(A1, A2, Rest...));
+
+    template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
+        A2
+        helper2(Ret (F::*)(A1, A2, Rest...) const);
+
     // 0
     template <typename Stream>
     inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<>& t)
@@ -147,38 +165,28 @@ namespace asio {
             }
         }
 
-        // 1
-        template<typename F, typename Ret, typename A1, typename... Rest>
-            A1
-            helper1(Ret (F::*)(A1, Rest...));
-
-        template<typename F, typename Ret, typename A1, typename... Rest>
-            A1
-            helper1(Ret (F::*)(A1, Rest...) const);
-
-        // 2
-        template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
-            A2
-            helper2(Ret (F::*)(A1, A2, Rest...));
-
-        template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
-            A2
-            helper2(Ret (F::*)(A1, A2, Rest...) const);
+        // for lambda
+        template<typename F, typename R, typename T, typename ...A>
+        void add_handler(const std::string &method, F handler, R(T::*)(A...)const)
+        {
+            add_handler(method, std::function<R(A...)>(handler));
+        }
 
         template<typename F>
         void add_handler(const std::string &method, F handler)
         {
             typedef decltype(handler) functor;
-            typedef decltype(helper0(&functor::operator())) R;
-            typedef decltype(helper1(&functor::operator())) A1;
-            typedef decltype(helper2(&functor::operator())) A2;
-            add_handler(method, std::function<R(A1, A2)>(handler));
+            add_handler(method, handler, &functor::operator());
         }
+
+        // for function pointer
         template<typename R, typename ...A>
         void add_handler(const std::string &method, R(*handler)(A...))
         {
             add_handler(method, std::function<R(A...)>(handler));
         }
+
+        // for std::function
         template<typename R, typename ...A>
         void add_handler(const std::string &method, std::function<R(A...)> handler)
         {
