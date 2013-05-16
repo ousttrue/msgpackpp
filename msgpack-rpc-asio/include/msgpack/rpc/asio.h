@@ -311,14 +311,34 @@ namespace asio {
             return m_next_msgid++;
         }
 
-        template<typename ...A>
-        ::msgpack::rpc::msg_request<std::string, std::tuple<A...>> 
-        create(const std::string &method, A...args)
+        // 0
+        ::msgpack::rpc::msg_request<std::string, std::tuple<>> 
+        create(const std::string &method)
         {
             ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef std::tuple<A...> Parameter;
+            typedef std::tuple<> Parameter;
             return ::msgpack::rpc::msg_request<std::string, Parameter>(
-                    method, Parameter(args...), msgid);
+                    method, Parameter(), msgid);
+        }
+        // 1
+        template<typename A1>
+        ::msgpack::rpc::msg_request<std::string, std::tuple<A1>> 
+        create(const std::string &method, A1 a1)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef std::tuple<A1> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(a1), msgid);
+        }
+        // 2
+        template<typename A1, typename A2>
+        ::msgpack::rpc::msg_request<std::string, std::tuple<A1, A2>> 
+        create(const std::string &method, A1 a1, A2 a2)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef std::tuple<A1, A2> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(a1, a2), msgid);
         }
     };
 
@@ -428,12 +448,27 @@ namespace asio {
                     }); 
         }
 
-        template<typename ...A>
-        std::shared_ptr<func_call> call(const std::string &method, A...args)
+        // 0
+        std::shared_ptr<func_call> call(const std::string &method)
         {
-            auto request=m_request_factory.create(method, args...);
+            auto request=m_request_factory.create(method);
             return sendRequest(request);
         }
+        // 1
+        template<typename A1>
+        std::shared_ptr<func_call> call(const std::string &method, A1 a1)
+        {
+            auto request=m_request_factory.create(method, a1);
+            return sendRequest(request);
+        }
+        // 2
+        template<typename A1, typename A2>
+        std::shared_ptr<func_call> call(const std::string &method, A1 a1, A2 a2)
+        {
+            auto request=m_request_factory.create(method, a1, a2);
+            return sendRequest(request);
+        }
+
 
         // read connection
         void startRead()
