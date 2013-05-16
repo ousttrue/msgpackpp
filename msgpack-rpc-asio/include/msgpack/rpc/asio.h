@@ -186,34 +186,14 @@ namespace asio {
 
         // ToDo: std::tuple variable length...
 
-        // 0
-        ::msgpack::rpc::msg_request<std::string, std::tuple<>> 
-        create(const std::string &method)
+        template<typename ...A>
+        ::msgpack::rpc::msg_request<std::string, std::tuple<A...>> 
+        create(const std::string &method, A...args)
         {
             ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef std::tuple<> Parameter;
+            typedef std::tuple<A...> Parameter;
             return ::msgpack::rpc::msg_request<std::string, Parameter>(
-                    method, Parameter(), msgid);
-        }
-        // 1
-        template<typename A1>
-        ::msgpack::rpc::msg_request<std::string, std::tuple<A1>> 
-        create(const std::string &method, A1 a1)
-        {
-            ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef std::tuple<A1> Parameter;
-            return ::msgpack::rpc::msg_request<std::string, Parameter>(
-                    method, Parameter(a1), msgid);
-        }
-        // 2
-        template<typename A1, typename A2>
-        ::msgpack::rpc::msg_request<std::string, std::tuple<A1, A2>> 
-        create(const std::string &method, A1 a1, A2 a2)
-        {
-            ::msgpack::rpc::msgid_t msgid = next_msgid();
-            typedef std::tuple<A1, A2> Parameter;
-            return ::msgpack::rpc::msg_request<std::string, Parameter>(
-                    method, Parameter(a1, a2), msgid);
+                    method, Parameter(args...), msgid);
         }
     };
 
@@ -323,11 +303,10 @@ namespace asio {
                     }); 
         }
 
-        // 2
-        template<typename A1, typename A2>
-        std::shared_ptr<func_call> call(const std::string &method, A1 a1, A2 a2)
+        template<typename ...A>
+        std::shared_ptr<func_call> call(const std::string &method, A...args)
         {
-            auto request=m_request_factory.create(method, a1, a2);
+            auto request=m_request_factory.create(method, args...);
             return sendRequest(request);
         }
 
