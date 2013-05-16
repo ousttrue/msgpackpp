@@ -8,7 +8,6 @@ https://github.com/msgpack/msgpack-rpc
 
 ToDo
 ----
-* 1引数関数
 * 3引数関数
 * 4引数関数
 * 5引数関数

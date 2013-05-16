@@ -57,6 +57,25 @@ namespace msgpack {
         o.pack(std::get<2>(t));
     }
 
+    // 0
+    inline std::tuple<>& operator>> (object o, std::tuple<>& t)
+    {
+        if(o.type != type::ARRAY) { throw type_error(); }
+        return t;
+    }
+
+    // 1
+    template <typename A1>
+    inline std::tuple<A1>& operator>> (object o, std::tuple<A1>& t)
+    {
+        if(o.type != type::ARRAY) { throw type_error(); }
+        if(o.via.array.size > 0) {
+            object* p = o.via.array.ptr;
+            p->convert(&std::get<0>(t));
+        }
+        return t;
+    }
+
     // 2
     template <typename A1, typename A2>
     inline std::tuple<A1, A2>& operator>> (object o, std::tuple<A1, A2>& t)
@@ -74,6 +93,20 @@ namespace msgpack {
 
 namespace rpc {
 namespace asio {
+
+    // 0
+    template<typename F>
+    auto call_with_tuple(const F &handler, std::tuple<> &args)->typename result_type<F>::type
+    {
+        return handler();
+    }
+
+    // 1
+    template<typename F, typename A1>
+    auto call_with_tuple(const F &handler, std::tuple<A1> &args)->typename result_type<F>::type
+    {
+        return handler(std::get<0>(args));
+    }
 
     // 2
     template<typename F, typename A1, typename A2>
@@ -114,15 +147,7 @@ namespace asio {
             }
         }
 
-        /*
-        template<typename F>
-            struct result_type {
-                typedef delctype( helper0(&F::operator()) ) type;
-            };
-            */
-
         // 1
-        // http://stackoverflow.com/questions/6512019/can-we-get-the-type-of-a-lambda-argument
         template<typename F, typename Ret, typename A1, typename... Rest>
             A1
             helper1(Ret (F::*)(A1, Rest...));
@@ -130,13 +155,6 @@ namespace asio {
         template<typename F, typename Ret, typename A1, typename... Rest>
             A1
             helper1(Ret (F::*)(A1, Rest...) const);
-
-        /*
-        template<typename F>
-            struct first_argument {
-                typedef delctype( helper1(&F::operator()) ) type;
-            };
-            */
 
         // 2
         template<typename F, typename Ret, typename A1, typename A2, typename... Rest>
@@ -147,13 +165,6 @@ namespace asio {
             A2
             helper2(Ret (F::*)(A1, A2, Rest...) const);
 
-        /*
-        template<typename F>
-            struct second_argument {
-                typedef delctype( helper2(&F::operator()) ) type;
-            };
-            */
-
         template<typename F>
         void add_handler(const std::string &method, F handler)
         {
@@ -163,10 +174,10 @@ namespace asio {
             typedef decltype(helper2(&functor::operator())) A2;
             add_handler(method, std::function<R(A1, A2)>(handler));
         }
-        template<typename R, typename A1, typename A2>
-        void add_handler(const std::string &method, R(*handler)(A1, A2))
+        template<typename R, typename ...A>
+        void add_handler(const std::string &method, R(*handler)(A...))
         {
-            add_handler(method, std::function<R(A1, A2)>(handler));
+            add_handler(method, std::function<R(A...)>(handler));
         }
         template<typename R, typename ...A>
         void add_handler(const std::string &method, std::function<R(A...)> handler)
@@ -210,8 +221,6 @@ namespace asio {
         {
             return m_next_msgid++;
         }
-
-        // ToDo: std::tuple variable length...
 
         template<typename ...A>
         ::msgpack::rpc::msg_request<std::string, std::tuple<A...>> 
