@@ -10,40 +10,6 @@
 
 namespace msgpack {
 
-    // ret 0
-    template<typename F, typename Ret>
-        Ret
-        helper0(Ret (F::*)());
-
-    template<typename F, typename Ret>
-        Ret
-        helper0(Ret (F::*)() const);
-
-    // ret 1
-    template<typename F, typename Ret, typename A1>
-        Ret
-        helper0(Ret (F::*)(A1));
-
-    template<typename F, typename Ret, typename A1>
-        Ret
-        helper0(Ret (F::*)(A1) const);
-
-    // ret 2
-    template<typename F, typename Ret, typename A1, typename A2>
-        Ret
-        helper0(Ret (F::*)(A1, A2));
-
-    template<typename F, typename Ret, typename A1, typename A2>
-        Ret
-        helper0(Ret (F::*)(A1, A2) const);
-
-    template<typename F>
-    struct result_type
-    {
-        typedef decltype(F()) func_type;
-        typedef decltype(helper0(&func_type::operator())) type;
-    };
-
     // std::tuple pack/unpack
     // 0
     template <typename Stream>
@@ -116,21 +82,21 @@ namespace asio {
     // handler call
     // 0
     template<typename F>
-    auto call_with_tuple(const F &handler, std::tuple<> &args)->typename result_type<F>::type
+    auto call_with_tuple(const F &handler, const std::tuple<> &args)->decltype(handler())
     {
         return handler();
     }
 
     // 1
     template<typename F, typename A1>
-    auto call_with_tuple(const F &handler, std::tuple<A1> &args)->typename result_type<F>::type
+    auto call_with_tuple(const F &handler, const std::tuple<A1> &args)->decltype(handler(A1()))
     {
         return handler(std::get<0>(args));
     }
 
     // 2
     template<typename F, typename A1, typename A2>
-    auto call_with_tuple(const F &handler, std::tuple<A1, A2> &args)->typename result_type<F>::type
+    auto call_with_tuple(const F &handler, const std::tuple<A1, A2> &args)->decltype(handler(A1(), A2()))
     {
         return handler(std::get<0>(args), std::get<1>(args));
     }
@@ -167,37 +133,16 @@ namespace asio {
             }
         }
 
-        // for lambda
-        template<typename F, typename R, typename T, typename ...A>
-        void add_handler(const std::string &method, F handler, R(T::*)(A...)const)
-        {
-            add_handler(method, std::function<R(A...)>(handler));
-        }
-
-        template<typename F>
-        void add_handler(const std::string &method, F handler)
-        {
-            typedef decltype(handler) functor;
-            add_handler(method, handler, &functor::operator());
-        }
-
-        // for function pointer
-        template<typename R, typename ...A>
-        void add_handler(const std::string &method, R(*handler)(A...))
-        {
-            add_handler(method, std::function<R(A...)>(handler));
-        }
-
-        // for std::function
-        template<typename R, typename ...A>
-        void add_handler(const std::string &method, std::function<R(A...)> handler)
+        /*
+        template<typename F, typename R, typename C, typename T>
+        void add_handler(const std::string &method, F handler, R(C::*)()const, const T &t)
         {
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
                             // extract args
-                            std::tuple<A...> params;
+                            T params;
                             msg_params.convert(&params);
 
                             // call
@@ -214,6 +159,140 @@ namespace asio {
                             msgpack::pack(*sbuf, msgres);
                             return sbuf;
                         }));
+        }
+        */
+
+        ////////////////////
+        // 0
+        template<typename F, typename R, typename C>
+        void add_handler(const std::string &method, F handler, R(C::*p)()const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                            // extract args
+                            std::tuple<> params;
+                            msg_params.convert(&params);
+
+                            // call
+                            R result=call_with_tuple(handler, params);
+
+                            // error type
+                            typedef ::msgpack::type::nil Error;
+                            ::msgpack::rpc::msg_response<R&, Error> msgres(
+                                result, 
+                                msgpack::type::nil(), 
+                                msgid);
+                            // result
+                            auto sbuf=std::make_shared<msgpack::sbuffer>();
+                            msgpack::pack(*sbuf, msgres);
+                            return sbuf;
+                        }));
+        }
+        // 1
+        template<typename F, typename R, typename C, typename A1>
+        void add_handler(const std::string &method, F handler, R(C::*p)(A1)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                            // extract args
+                            std::tuple<A1> params;
+                            msg_params.convert(&params);
+
+                            // call
+                            R result=call_with_tuple(handler, params);
+
+                            // error type
+                            typedef ::msgpack::type::nil Error;
+                            ::msgpack::rpc::msg_response<R&, Error> msgres(
+                                result, 
+                                msgpack::type::nil(), 
+                                msgid);
+                            // result
+                            auto sbuf=std::make_shared<msgpack::sbuffer>();
+                            msgpack::pack(*sbuf, msgres);
+                            return sbuf;
+                        }));
+        }
+        // 2
+        template<typename F, typename R, typename C, typename A1, typename A2>
+        void add_handler(const std::string &method, F handler, R(C::*p)(A1, A2)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                            // extract args
+                            std::tuple<A1, A2> params;
+                            msg_params.convert(&params);
+
+                            // call
+                            R result=call_with_tuple(handler, params);
+
+                            // error type
+                            typedef ::msgpack::type::nil Error;
+                            ::msgpack::rpc::msg_response<R&, Error> msgres(
+                                result, 
+                                msgpack::type::nil(), 
+                                msgid);
+                            // result
+                            auto sbuf=std::make_shared<msgpack::sbuffer>();
+                            msgpack::pack(*sbuf, msgres);
+                            return sbuf;
+                        }));
+        }
+        // for lambda
+        template<typename F>
+        void add_handler(const std::string &method, F handler)
+        {
+            typedef decltype(handler) functor;
+            add_handler(method, handler, &functor::operator());
+        }
+
+        // for function pointer
+        // 0
+        template<typename R>
+        void add_handler(const std::string &method, R(*handler)())
+        {
+            add_handler(method, std::function<R()>(handler));
+        }
+        // 1
+        template<typename R, typename A1>
+        void add_handler(const std::string &method, R(*handler)(A1))
+        {
+            add_handler(method, std::function<R(A1)>(handler));
+        }
+        // 2
+        template<typename R, typename A1, typename A2>
+        void add_handler(const std::string &method, R(*handler)(A1, A2))
+        {
+            add_handler(method, std::function<R(A1, A2)>(handler));
+        }
+
+        // for std::function
+        // 0
+        template<typename R>
+        void add_handler(const std::string &method, std::function<R()> handler)
+        {
+            typedef decltype(handler) functor;
+            add_handler(method, handler, &functor::operator());
+        }
+        // 1
+        template<typename R, typename A1>
+        void add_handler(const std::string &method, std::function<R(A1)> handler)
+        {
+            typedef decltype(handler) functor;
+            add_handler(method, handler, &functor::operator());
+        }
+        // 2
+        template<typename R, typename A1, typename A2>
+        void add_handler(const std::string &method, std::function<R(A1, A2)> handler)
+        {
+            typedef decltype(handler) functor;
+            add_handler(method, handler, &functor::operator());
         }
     };
 
