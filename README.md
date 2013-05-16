@@ -44,8 +44,8 @@ int main(int argc, char **argv)
     // server
     boost::asio::io_service server_io;
     msgpack::asiorpc::server server(server_io);
-    server.get_dispatcher()->add_handler([](int a, int b)->int{ return a+b; }, "add");
-    server.get_dispatcher()->add_handler([](float a, float b)->float{ return a*b; }, "mul");
+    server.get_dispatcher()->add_handler("add", [](int a, int b)->int{ return a+b; });
+    server.get_dispatcher()->add_handler("mul", [](float a, float b)->float{ return a*b; });
     server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io](){ server_io.run(); });
 
