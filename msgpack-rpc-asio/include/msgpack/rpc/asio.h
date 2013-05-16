@@ -16,6 +16,7 @@ namespace msgpack {
     inline packer<Stream>& operator<< (packer<Stream>& o, const std::tuple<>& t)
     {
         o.pack_array(0);
+		return o;
     }
     // 1
     template <typename Stream, typename A1>
@@ -23,6 +24,7 @@ namespace msgpack {
     {
         o.pack_array(1);
         o.pack(std::get<0>(t));
+		return o;
     }
     // 2
     template <typename Stream, typename A1, typename A2>
@@ -31,6 +33,7 @@ namespace msgpack {
         o.pack_array(2);
         o.pack(std::get<0>(t));
         o.pack(std::get<1>(t));
+		return o;
     }
     // 3
     template <typename Stream, typename A1, typename A2, typename A3>
@@ -40,6 +43,7 @@ namespace msgpack {
         o.pack(std::get<0>(t));
         o.pack(std::get<1>(t));
         o.pack(std::get<2>(t));
+		return o;
     }
 
     // 0

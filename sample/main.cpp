@@ -9,9 +9,9 @@ int main(int argc, char **argv)
     // server
     boost::asio::io_service server_io;
     msgpack::rpc::asio::server server(server_io);
-    server.get_dispatcher()->add_handler([](int a, int b)->int{ return a+b; }, "add");
+    server.get_dispatcher()->add_handler("add", [](int a, int b)->int{ return a+b; });
     std::function<float(float, float)> func2=[](float a, float b)->float{ return a*b; };
-    server.get_dispatcher()->add_handler(func2, "mul");
+    server.get_dispatcher()->add_handler("mul", func2);
     server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io](){ server_io.run(); });
 
@@ -23,8 +23,8 @@ int main(int argc, char **argv)
     boost::thread clinet_thread([&client_io](){ client_io.run(); });
 
     // request
-    auto request1=client->call(std::function<int(int, int)>(), "add", 1, 2);
-    auto request2=client->call(std::function<float(float, float)>(), "mul", 1.2f, 5.0f);
+    auto request1=client->call("add", 1, 2);
+    auto request2=client->call("mul", 1.2f, 5.0f);
 
     int result1;
     request1->sync().convert(&result1);
