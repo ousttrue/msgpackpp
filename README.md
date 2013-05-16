@@ -33,7 +33,7 @@ Requied
 Sample
 ------
 ```c++
-#include <msgpack/asiorpc.h>
+#include <msgpack/rpc/asio.h>
 #include <boost/thread.hpp>
 
 
@@ -44,16 +44,9 @@ int main(int argc, char **argv)
     // server
     boost::asio::io_service server_io;
     msgpack::asiorpc::server server(server_io);
-
-    // ToDo
-    std::function<int(int, int)> func1=[](int a, int b)->int{ return a+b; };
-    server.get_dispatcher()->add_handler(func1, "add");
-
-    // ToDo
-    std::function<float(float, float)> func2=[](float a, float b)->float{ return a*b; };
-    server.get_dispatcher()->add_handler(func2, "mul");
-
-    server.start(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
+    server.get_dispatcher()->add_handler([](int a, int b)->int{ return a+b; }, "add");
+    server.get_dispatcher()->add_handler([](float a, float b)->float{ return a*b; }, "mul");
+    server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io](){ server_io.run(); });
 
     // client
@@ -64,12 +57,15 @@ int main(int argc, char **argv)
     boost::thread clinet_thread([&client_io](){ client_io.run(); });
 
     // request
-    auto request1=client->call(std::function<int(int, int)>(), "add", 1, 2);
-    auto request2=client->call(std::function<float(float, float)>(), "mul", 1.2f, 5.0f);
+    auto request1=client->call("add", 1, 2);
+    auto request2=client->call("mul", 1.2f, 5.0f);
 
-    std::cout << request1->get_sync<int>() << std::endl;
-    std::cout << request2->get_sync<float>() << std::endl;
+    int result1;
+    std::cout << request1->sync().convert(&result1) << std::endl;
+    float result2;
+    std::cout << request2->sync().convert(&result2) << std::endl;
 
+    // stop asio
     client_io.stop();
     clinet_thread.join();
 
