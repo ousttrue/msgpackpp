@@ -16,14 +16,14 @@ ToDo
 * 8引数関数
 * 9引数関数
 
-Install
+License
 -------
-msgpack-rpcにinclude/msgpack/rpc/asio.hを追加する。
-msgpack-rpcのビルドは不要。
-include/msgpack/rpc/exception.h
-include/msgpack/rpc/protocol.h
-include/msgpack/rpc/types.h
-のみを使用する。
+msgpackおよびmsgpack-rpcの本家と同じApache License Version 2.0
+
+Build
+-----
+- vs2010.batを実行
+- msgpack-rpc-asio.slnを開く
 
 Requied
 -------
