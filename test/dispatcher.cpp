@@ -11,19 +11,16 @@ static float zero()
 
 BOOST_AUTO_TEST_CASE( dispatcher0 )
 {
-    // server
-    boost::asio::io_service server_io;
-    msgpack::rpc::asio::server server(server_io);
-    auto dispatcher=server.get_dispatcher();
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
-    dispatcher->add_handler("fp", &zero);
+    dispatcher.add_handler("fp", &zero);
 
     // lambda
-    dispatcher->add_handler("lambda", [](){ return 0; });
+    dispatcher.add_handler("lambda", [](){ return 0; });
 
     // std::function
-    dispatcher->add_handler("std::function", std::function<int()>(zero));
+    dispatcher.add_handler("std::function", std::function<float()>(zero));
 }
 
 // 1
@@ -34,19 +31,16 @@ static bool unary(double n)
 
 BOOST_AUTO_TEST_CASE( dispatcher1 )
 {
-    // server
-    boost::asio::io_service server_io;
-    msgpack::rpc::asio::server server(server_io);
-    auto dispatcher=server.get_dispatcher();
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
-    dispatcher->add_handler("fp", &unary);
+    dispatcher.add_handler("fp", &unary);
 
     // lambda
-    dispatcher->add_handler("lambda", [](int a){ return a; });
+    dispatcher.add_handler("lambda", [](int a){ return a; });
 
     // std::function
-    dispatcher->add_handler("std::function", std::function<bool(double)>(unary));
+    dispatcher.add_handler("std::function", std::function<bool(double)>(unary));
 }
 
 // 2
@@ -57,23 +51,20 @@ static int binary(int a, int b)
 
 BOOST_AUTO_TEST_CASE( dispatcher2 )
 {
-    // server
-    boost::asio::io_service server_io;
-    msgpack::rpc::asio::server server(server_io);
-    auto dispatcher=server.get_dispatcher();
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
-    dispatcher->add_handler("fp", &binary);
+    dispatcher.add_handler("fp", &binary);
 
     // lambda
-    dispatcher->add_handler("lambda", [](int a, int b){ return a+b; });
+    dispatcher.add_handler("lambda", [](int a, int b){ return a+b; });
 
     // std::function
-    dispatcher->add_handler("std::function", std::function<int(int, int)>(binary));
+    dispatcher.add_handler("std::function", std::function<int(int, int)>(binary));
 
     /* ToDo ?
     // std::bind
-    dispatcher->add_handler("std::bind", std::bind(&binary, std::placeholders::_1, std::placeholders::_2));
+    dispatcher.add_handler("std::bind", std::bind(&binary, std::placeholders::_1, std::placeholders::_2));
     */
 }
 

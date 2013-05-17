@@ -140,7 +140,7 @@ public:
         return ss.str();
     }
 };
-std::ostream &operator<<(std::ostream &os, const func_call &request)
+inline std::ostream &operator<<(std::ostream &os, const func_call &request)
 {
     os << request.string();
     return os;

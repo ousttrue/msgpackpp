@@ -18,10 +18,8 @@ BOOST_AUTO_TEST_CASE( func0 )
     boost::thread client_thread([&client_io](){ client_io.run(); });
 
     // request
-    std::shared_ptr<msgpack::rpc::asio::func_call> req=client->call("zero");
-    req->sync();
     int result;
-    //BOOST_CHECK_EQUAL(req->sync().convert(&result), 7);
+    BOOST_CHECK_EQUAL(client->call_sync(&result, "zero"), 0);
 
     client_io.stop();
     client_thread.join();
@@ -41,7 +39,7 @@ BOOST_AUTO_TEST_CASE( func1 )
     boost::thread client_thread([&client_io](){ client_io.run(); });
 
     // request
-    std::shared_ptr<msgpack::rpc::asio::func_call> req=client->call("acc", 1);
+    std::shared_ptr<msgpack::rpc::asio::func_call> req=client->call_async("acc", 1);
     req->sync();
     int result;
     BOOST_CHECK_EQUAL(req->sync().convert(&result), 1);
@@ -64,9 +62,8 @@ BOOST_AUTO_TEST_CASE( func2 )
     boost::thread client_thread([&client_io](){ client_io.run(); });
 
     // request
-    std::shared_ptr<msgpack::rpc::asio::func_call> req=client->call("add", 3, 4);
     int result;
-    BOOST_CHECK_EQUAL(req->sync().convert(&result), 7);
+    BOOST_CHECK_EQUAL(client->call_sync(&result, "add", 3, 4), 7);
 
     client_io.stop();
     client_thread.join();

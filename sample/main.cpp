@@ -17,31 +17,7 @@ int main(int argc, char **argv)
     auto dispatcher=std::make_shared<msgpack::rpc::asio::dispatcher>();
     dispatcher->add_handler("add", [](int a, int b)->int{ return a+b; });
     dispatcher->add_handler("mul", [](float a, float b)->float{ return a*b; });
-    bool is_run=true;
-    boost::thread dispatcher_thread([dispatcher, queue, &is_run](){
-
-                while(is_run)
-                {
-                    auto item=queue->dequeue();
-                    if(item){
-
-                        // extract msgpack request
-                        ::msgpack::rpc::msg_request<msgpack::object, msgpack::object> req;
-                        item->msg().convert(&req);
-                        // execute callback
-                        std::shared_ptr<msgpack::sbuffer> result=dispatcher->request(
-                            req.msgid, req.method, req.param);
-                        // send 
-                        item->session()->enqueue(result);
-
-                    }
-
-                    boost::this_thread::sleep(boost::posix_time::milliseconds(300));
-                }
-
-				std::cout << "stop dispatcher loop" << std::endl;
-
-            });
+    dispatcher->start_thread(server.get_request_queue());
 
     // client
     boost::asio::io_service client_io;
@@ -61,8 +37,7 @@ int main(int argc, char **argv)
     std::cout << "result = " << request->sync().convert(&result2) << std::endl;
 
     // stop asio
-	is_run=false;
-	dispatcher_thread.join();
+	dispatcher->stop();
 
     client_io.stop();
     clinet_thread.join();

@@ -33,14 +33,18 @@ class dispatcher
         std::shared_ptr<msgpack::sbuffer>(msgpack::rpc::msgid_t, msgpack::object)
         > func;
     std::map<std::string, func> m_handlerMap;
+    bool m_is_running;
+    std::shared_ptr<boost::thread> m_thread;
 
 public:
     dispatcher()
+        : m_is_running(false)
     {
     }
 
     ~dispatcher()
     {
+        stop();
     }
 
     std::shared_ptr<msgpack::sbuffer> request(::msgpack::rpc::msgid_t msgid, 
@@ -57,6 +61,48 @@ public:
             auto func=found->second;
             return func(msgid, params);
         }
+    }
+
+    void start_thread(std::shared_ptr<server_request_queue> queue)
+    {
+        if(m_thread){
+            return;
+        }
+        m_is_running=true;
+
+        auto d=this;
+        m_thread=std::make_shared<boost::thread>([d, queue](){
+
+                while(d->m_is_running)
+                {
+                    auto item=queue->dequeue();
+                    if(item){
+
+                        // extract msgpack request
+                        ::msgpack::rpc::msg_request<msgpack::object, msgpack::object> req;
+                        item->msg().convert(&req);
+                        // execute callback
+                        std::shared_ptr<msgpack::sbuffer> result=d->request(
+                            req.msgid, req.method, req.param);
+                        // send 
+                        item->session()->enqueue(result);
+                    }
+
+                    // ToDo: queue cond
+                    boost::this_thread::sleep(boost::posix_time::milliseconds(300));
+                }
+
+				std::cout << "stop dispatcher loop" << std::endl;
+            });
+    }
+
+    void stop()
+    {
+        m_is_running=false;
+        if(m_thread){
+            m_thread->join();
+        }
+        m_thread=0;
     }
 
     ////////////////////
