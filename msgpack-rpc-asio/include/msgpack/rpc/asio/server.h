@@ -5,6 +5,48 @@ namespace rpc {
 namespace asio {
 
 
+class server;
+class queue_item
+{
+    object m_msg;
+    std::weak_ptr<server> m_server;
+
+public:
+    queue_item(const object &msg, std::shared_ptr<server> server)
+        : m_msg(msg), m_server(server)
+    {}
+
+    const object& msg()const{ return m_msg; }
+    std::shared_ptr<server> server()const{ return m_server.lock(); }
+};
+
+
+class server_request_queue
+{
+    std::list<std::shared_ptr<queue_item>> m_queue;
+    boost::mutex m_mutex;
+public:
+    void enqueue(std::shared_ptr<queue_item> item)
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        m_queue.push_back(item);
+    }
+
+    std::shared_ptr<queue_item> dequeue()
+    {
+        boost::mutex::scoped_lock lock(m_mutex);
+        if(m_queue.empty()){
+            return std::shared_ptr<queue_item>();
+        }
+        else{
+            auto item=m_queue.front();
+            m_queue.pop_front();
+            return item;
+        }
+    }
+};
+
+
 class server
 {
     boost::asio::io_service &m_io_service;
