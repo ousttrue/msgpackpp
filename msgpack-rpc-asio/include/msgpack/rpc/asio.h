@@ -366,6 +366,8 @@ namespace asio {
         ::msgpack::object m_result;
         ::msgpack::object m_error;
         std::string m_request;
+        boost::mutex m_mutex;
+        boost::condition_variable_any m_cond;
     public:
         func_call(const std::string &s)
             : m_status(STATUS_WAIT), m_request(s)
@@ -374,23 +376,32 @@ namespace asio {
 
         void set_result(const ::msgpack::object &result)
         {
+            if(m_status!=STATUS_WAIT){
+                throw rpc_error("already finishded");
+            }
+            boost::mutex::scoped_lock lock(m_mutex);
             m_result=result;
             m_status=STATUS_RECEIVED;
+            m_cond.notify_all();
         }
 
         void set_error(const ::msgpack::object &error)
         {
+            if(m_status!=STATUS_WAIT){
+                throw rpc_error("already finishded");
+            }
+            boost::mutex::scoped_lock lock(m_mutex);
             m_error=error;
             m_status=STATUS_ERROR;
+            m_cond.notify_all();
         }
 
         // blocking
-        // ToDo: boost::condition
         func_call& sync()
         {
-            while(m_status==STATUS_WAIT)
-            {
-                boost::this_thread::sleep(boost::posix_time::milliseconds(300));
+            boost::mutex::scoped_lock lock(m_mutex);
+            if(m_status==STATUS_WAIT){
+                m_cond.wait(m_mutex);
             }
             return *this;
         }
