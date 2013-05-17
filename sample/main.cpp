@@ -22,17 +22,16 @@ int main(int argc, char **argv)
     boost::thread clinet_thread([&client_io](){ client_io.run(); });
 
     // request
-    auto request1=client->call("add", 1, 2);
-    auto request2=client->call("mul", 1.2f, 5.0f);
+	int result1;
+    std::cout << "add, 1, 2 = " << client->call_sync(&result1, "add", 1, 2) << std::endl;
 
-    int result1;
-    request1->sync().convert(&result1);
+    auto request=client->call_async("mul", 1.2f, 5.0f);
+    std::cout << *request << std::endl;
+
     float result2;
-    request2->sync().convert(&result2);
+    std::cout << "result = " << request->sync().convert(&result2) << std::endl;
 
-    std::cout << result1 << std::endl;
-    std::cout << result2 << std::endl;
-
+    // stop asio
     client_io.stop();
     clinet_thread.join();
 

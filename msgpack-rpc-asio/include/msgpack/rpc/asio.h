@@ -7,6 +7,40 @@
 #include <msgpack/rpc/types.h>
 #include <msgpack/rpc/exception.h>
 
+namespace std {
+
+// 0
+inline std::ostream &operator<<(std::ostream &os, const std::tr1::tuple<> &t)
+{
+    os << "()";
+    return os;
+}
+
+// 1
+template<typename A1>
+inline std::ostream &operator<<(std::ostream &os, const std::tr1::tuple<A1> &t)
+{
+    os 
+        << "("
+        << std::get<0>(t)
+        << ")";
+    return os;
+}
+
+// 2
+template<typename A1, typename A2>
+inline std::ostream &operator<<(std::ostream &os, const std::tr1::tuple<A1, A2> &t)
+{
+    os 
+        << "("
+        << std::get<0>(t)
+        << ", " << std::get<1>(t)
+        << ")";
+    return os;
+}
+
+}
+
 
 namespace msgpack {
 
@@ -136,35 +170,6 @@ namespace asio {
                 return func(msgid, params);
             }
         }
-
-        /*
-        template<typename F, typename R, typename C, typename T>
-        void add_handler(const std::string &method, F handler, R(C::*)()const, const T &t)
-        {
-            m_handlerMap.insert(std::make_pair(method, [handler](
-                            ::msgpack::rpc::msgid_t msgid, 
-                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
-                        {
-                            // extract args
-                            T params;
-                            msg_params.convert(&params);
-
-                            // call
-                            R result=call_with_tuple(handler, params);
-
-                            // error type
-                            typedef ::msgpack::type::nil Error;
-                            ::msgpack::rpc::msg_response<R&, Error> msgres(
-                                result, 
-                                msgpack::type::nil(), 
-                                msgid);
-                            // result
-                            auto sbuf=std::make_shared<msgpack::sbuffer>();
-                            msgpack::pack(*sbuf, msgres);
-                            return sbuf;
-                        }));
-        }
-        */
 
         ////////////////////
         // 0
@@ -349,18 +354,21 @@ namespace asio {
 
     class func_call
     {
+    public:
         enum STATUS_TYPE
         {
             STATUS_WAIT,
             STATUS_RECEIVED,
             STATUS_ERROR,
         };
+    private:
         STATUS_TYPE m_status;
         ::msgpack::object m_result;
         ::msgpack::object m_error;
+        std::string m_request;
     public:
-        func_call()
-            : m_status(STATUS_WAIT)
+        func_call(const std::string &s)
+            : m_status(STATUS_WAIT), m_request(s)
         {
         }
 
@@ -398,8 +406,35 @@ namespace asio {
                 throw rpc_error("not ready");
             }
         }
-    };
 
+        std::string string()const
+        {
+            std::stringstream ss;
+            ss << m_request << " = ";
+            switch(m_status)
+            {
+                case func_call::STATUS_WAIT:
+                    ss << "?";
+                    break;
+                case func_call::STATUS_RECEIVED:
+                    ss << m_result;
+                    break;
+                case func_call::STATUS_ERROR:
+                    ss << "!";
+                    break;
+                default:
+                    ss << "!?";
+                    break;
+            }
+                
+            return ss.str();
+        }
+    };
+    std::ostream &operator<<(std::ostream &os, const func_call &request)
+    {
+        os << request.string();
+        return os;
+    }
 
     class session: public std::enable_shared_from_this<session>
     {
@@ -453,26 +488,53 @@ namespace asio {
         }
 
         // 0
-        std::shared_ptr<func_call> call(const std::string &method)
+        std::shared_ptr<func_call> call_async(const std::string &method)
         {
             auto request=m_request_factory.create(method);
             return sendRequest(request);
         }
         // 1
         template<typename A1>
-        std::shared_ptr<func_call> call(const std::string &method, A1 a1)
+        std::shared_ptr<func_call> call_async(const std::string &method, A1 a1)
         {
             auto request=m_request_factory.create(method, a1);
             return sendRequest(request);
         }
         // 2
         template<typename A1, typename A2>
-        std::shared_ptr<func_call> call(const std::string &method, A1 a1, A2 a2)
+        std::shared_ptr<func_call> call_async(const std::string &method, A1 a1, A2 a2)
         {
             auto request=m_request_factory.create(method, a1, a2);
             return sendRequest(request);
         }
 
+        // 0
+        template<typename R>
+        R &call_sync(R *value, const std::string &method)
+        {
+            auto request=m_request_factory.create(method);
+            auto call=sendRequest(request);
+            call->sync().convert(value);
+            return *value;
+        }
+        // 1
+        template<typename R, typename A1>
+        R &call_sync(R *value, const std::string &method, A1 a1)
+        {
+            auto request=m_request_factory.create(method, a1);
+            auto call=sendRequest(request);
+            call->sync().convert(value);
+            return *value;
+        }
+        // 2
+        template<typename R, typename A1, typename A2>
+        R &call_sync(R *value, const std::string &method, A1 a1, A2 a2)
+        {
+            auto request=m_request_factory.create(method, a1, a2);
+            auto call=sendRequest(request);
+            call->sync().convert(value);
+            return *value;
+        }
 
         // read connection
         void startRead()
@@ -571,7 +633,9 @@ namespace asio {
             auto sbuf=std::make_shared<msgpack::sbuffer>();
             ::msgpack::pack(*sbuf, msgreq);
 
-            auto req=std::make_shared<func_call>();            
+			std::stringstream ss;
+			ss << msgreq.method << msgreq.param;
+            auto req=std::make_shared<func_call>(ss.str());
             m_requestMap.insert(std::make_pair(msgreq.msgid, req));
 
             enqueueWrite(sbuf);
