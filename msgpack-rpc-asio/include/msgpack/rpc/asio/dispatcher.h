@@ -85,14 +85,14 @@ public:
                         std::shared_ptr<msgpack::sbuffer> result=d->request(
                             req.msgid, req.method, req.param);
                         // send 
-                        item->session()->enqueue(result);
+                        item->session()->enqueue_write(result);
                     }
 
                     // ToDo: queue cond
                     boost::this_thread::sleep(boost::posix_time::milliseconds(300));
                 }
 
-				std::cout << "stop dispatcher loop" << std::endl;
+				//std::cout << "stop dispatcher loop" << std::endl;
             });
     }
 

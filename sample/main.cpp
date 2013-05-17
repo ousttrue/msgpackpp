@@ -21,16 +21,16 @@ int main(int argc, char **argv)
 
     // client
     boost::asio::io_service client_io;
-    auto client=msgpack::rpc::asio::session::create(client_io); 
-    client->connect(boost::asio::ip::tcp::endpoint(
+    msgpack::rpc::asio::client client(client_io); 
+    client.connect_async(boost::asio::ip::tcp::endpoint(
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT));
     boost::thread clinet_thread([&client_io](){ client_io.run(); });
 
     // request
 	int result1;
-    std::cout << "add, 1, 2 = " << client->call_sync(&result1, "add", 1, 2) << std::endl;
+    std::cout << "add, 1, 2 = " << client.call_sync(&result1, "add", 1, 2) << std::endl;
 
-    auto request=client->call_async("mul", 1.2f, 5.0f);
+    auto request=client.call_async("mul", 1.2f, 5.0f);
     std::cout << *request << std::endl;
 
     float result2;
@@ -47,4 +47,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

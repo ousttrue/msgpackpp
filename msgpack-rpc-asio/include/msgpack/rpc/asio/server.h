@@ -46,18 +46,21 @@ private:
     void start_accept()
     {
         auto self=this;
-        auto new_connection = session::create(m_io_service, m_request_queue);
+        auto queue=m_request_queue;
+        auto new_connection = session::create(m_io_service, [queue](const object &msg, std::shared_ptr<session> session){
+					queue->enqueue(std::make_shared<msg_item>(msg, session));
+                });
+
         m_sessions.push_back(new_connection);
         m_acceptor.async_accept(new_connection->socket(),
                 [self, new_connection](const boost::system::error_code& error){
                 if (error){
-                std::cerr << "error !" << std::endl;
+                    throw rpc_error("fail to accept ?");
                 }
                 else{
-                new_connection->startRead();
-
-                // next
-                self->start_accept();
+                    new_connection->start_read();
+                    // next
+                    self->start_accept();
                 }
                 });
     }
