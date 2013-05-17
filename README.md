@@ -45,10 +45,14 @@ int main(int argc, char **argv)
     // server
     boost::asio::io_service server_io;
     msgpack::rpc::asio::server server(server_io);
-    server.get_dispatcher()->add_handler("add", [](int a, int b)->int{ return a+b; });
-    server.get_dispatcher()->add_handler("mul", [](float a, float b)->float{ return a*b; });
     server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io](){ server_io.run(); });
+
+    // dispatcher
+    msgpack::rpc::asio::dispatcher dispatcher;
+    dispatcher.add_handler("add", [](int a, int b)->int{ return a+b; });
+    dispatcher.add_handler("mul", [](float a, float b)->float{ return a*b; });
+    dispatcher.start_thread();
 
     // client
     boost::asio::io_service client_io;
@@ -67,6 +71,8 @@ int main(int argc, char **argv)
     std::cout << request2->sync().convert(&result2) << std::endl;
 
     // stop asio
+    dispatcher.stop();
+
     client_io.stop();
     clinet_thread.join();
 
