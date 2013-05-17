@@ -11,8 +11,8 @@ class request_factory
 public:
     request_factory()
         : m_next_msgid(1)
-    {
-    }
+        {
+        }
 
     ::msgpack::rpc::msgid_t next_msgid()
     {
@@ -56,9 +56,9 @@ class func_call
 public:
     enum STATUS_TYPE
     {
-    STATUS_WAIT,
-    STATUS_RECEIVED,
-    STATUS_ERROR,
+        STATUS_WAIT,
+        STATUS_RECEIVED,
+        STATUS_ERROR,
     };
 private:
     STATUS_TYPE m_status;
@@ -70,8 +70,8 @@ private:
 public:
     func_call(const std::string &s)
         : m_status(STATUS_WAIT), m_request(s)
-    {
-    }
+        {
+        }
 
     void set_result(const ::msgpack::object &result)
     {
@@ -146,6 +146,7 @@ inline std::ostream &operator<<(std::ostream &os, const func_call &request)
     return os;
 }
 
+
 class session: public std::enable_shared_from_this<session>
 {
     request_factory m_request_factory;
@@ -154,13 +155,13 @@ class session: public std::enable_shared_from_this<session>
     char m_data[max_length];
     unpacker m_pac;
     // server queue
-    std::weak_ptr<server_request_queue> m_server_queue;
+    std::weak_ptr<received_msg_queue> m_server_queue;
     // write queue
     bool m_writing;
     std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
     std::map<msgpack::rpc::msgid_t, std::shared_ptr<func_call>> m_requestMap;
     // must shard_ptr
-    session(boost::asio::io_service& io_service, std::shared_ptr<server_request_queue> server_queue)
+    session(boost::asio::io_service& io_service, std::shared_ptr<received_msg_queue> server_queue)
         : m_socket(io_service), m_pac(1024), m_server_queue(server_queue),
         m_writing(false)
     {
@@ -172,7 +173,7 @@ public:
     }
 
     static std::shared_ptr<session> create(boost::asio::io_service &io_service,
-            std::shared_ptr<server_request_queue> server_queue=std::shared_ptr<server_request_queue>())
+            std::shared_ptr<received_msg_queue> server_queue=std::shared_ptr<received_msg_queue>())
     {
         return std::shared_ptr<session>(new session(io_service, server_queue));
     }
@@ -278,7 +279,7 @@ public:
 
                     switch(rpc.type) {
                         case ::msgpack::rpc::REQUEST: 
-                            server_queue->enqueue(std::make_shared<queue_item>(msg, shared));
+                            server_queue->enqueue(std::make_shared<msg_item>(msg, shared));
                             break;
 
                         case ::msgpack::rpc::RESPONSE: 

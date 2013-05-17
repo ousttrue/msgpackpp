@@ -63,7 +63,7 @@ public:
         }
     }
 
-    void start_thread(std::shared_ptr<server_request_queue> queue)
+    void start_thread(std::shared_ptr<received_msg_queue> queue)
     {
         if(m_thread){
             return;

@@ -10,10 +10,10 @@ class server
     boost::asio::io_service &m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
     std::list<std::weak_ptr<session>> m_sessions;
-    std::shared_ptr<server_request_queue> m_request_queue;
+    std::shared_ptr<received_msg_queue> m_request_queue;
 public:
     server(boost::asio::io_service &io_service)
-        : m_io_service(io_service), m_acceptor(io_service), m_request_queue(new server_request_queue)
+        : m_io_service(io_service), m_acceptor(io_service), m_request_queue(new received_msg_queue)
     {
     }
 
@@ -27,7 +27,7 @@ public:
         }
     }
 
-    std::shared_ptr<server_request_queue> get_request_queue(){ return m_request_queue; }
+    std::shared_ptr<received_msg_queue> get_request_queue(){ return m_request_queue; }
 
     void listen(boost::asio::ip::tcp::endpoint endpoint)
     {

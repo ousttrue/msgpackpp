@@ -6,13 +6,13 @@ namespace asio {
 
 
 class session;
-class queue_item
+class msg_item
 {
     object m_msg;
     std::weak_ptr<session> m_session;
 
 public:
-    queue_item(const object &msg, std::shared_ptr<session> session)
+    msg_item(const object &msg, std::shared_ptr<session> session)
         : m_msg(msg), m_session(session)
     {}
 
@@ -21,22 +21,22 @@ public:
 };
 
 
-class server_request_queue
+class received_msg_queue
 {
-    std::list<std::shared_ptr<queue_item>> m_queue;
+    std::list<std::shared_ptr<msg_item>> m_queue;
     boost::mutex m_mutex;
 public:
-    void enqueue(std::shared_ptr<queue_item> item)
+    void enqueue(std::shared_ptr<msg_item> item)
     {
         boost::mutex::scoped_lock lock(m_mutex);
         m_queue.push_back(item);
     }
 
-    std::shared_ptr<queue_item> dequeue()
+    std::shared_ptr<msg_item> dequeue()
     {
         boost::mutex::scoped_lock lock(m_mutex);
         if(m_queue.empty()){
-            return std::shared_ptr<queue_item>();
+            return std::shared_ptr<msg_item>();
         }
         else{
             auto item=m_queue.front();
