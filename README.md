@@ -61,18 +61,19 @@ int main(int argc, char **argv)
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT));
     boost::thread clinet_thread([&client_io](){ client_io.run(); });
 
-    // request
-    auto request1=client->call("add", 1, 2);
-    auto request2=client->call("mul", 1.2f, 5.0f);
-
+    // async request
+    auto request1=client->call_async("add", 1, 2);
     int result1;
     std::cout << request1->sync().convert(&result1) << std::endl;
-    float result2;
-    std::cout << request2->sync().convert(&result2) << std::endl;
 
-    // stop asio
+    // sync request
+    float result2;
+    std::cout << client->call_sync(&result2, "mul", 1.2f, 5.0f) << std::endl;
+
+    // stop dispatcher thread
     dispatcher.stop();
 
+    // stop asio
     client_io.stop();
     clinet_thread.join();
 
