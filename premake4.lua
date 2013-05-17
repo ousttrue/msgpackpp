@@ -39,8 +39,12 @@ do
     includedirs {
         "$(BOOST_DIR)",
     }
+    defines {
+        "_WIN32_WINNT=0x0500",
+    }
     buildoptions {
         "/TP",
+        "/wd4800",
     }
     libdirs {
         "$(BOOST_DIR)/lib",
