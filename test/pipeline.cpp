@@ -19,12 +19,10 @@ BOOST_AUTO_TEST_CASE( pipeline )
     boost::thread client_thread([&client_io](){ client_io.run(); });
 
     // request
-    auto request1=client->call("add", 1, 2);
-    request1->sync();
-    int result1;
-    BOOST_CHECK_EQUAL(request1->convert(&result1), 3);
+    int request1;
+    BOOST_CHECK_EQUAL(request1->convert(client->sync(&result1, "add", 1, 2)), 3);
 
-    auto request2=client->call("add", 3, 4);
+    auto request2=client->call_async("add", 3, 4);
     request2->sync();
     int result2;
     BOOST_CHECK_EQUAL(request2->convert(&result2), 7);

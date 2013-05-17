@@ -153,16 +153,15 @@ class session: public std::enable_shared_from_this<session>
     enum { max_length = 1024 };
     char m_data[max_length];
     unpacker m_pac;
-    std::weak_ptr<dispatcher> m_dispatcher;
-
+    // server queue
+    std::weak_ptr<server_request_queue> m_server_queue;
+    // write queue
     bool m_writing;
     std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
     std::map<msgpack::rpc::msgid_t, std::shared_ptr<func_call>> m_requestMap;
-
     // must shard_ptr
-    session(boost::asio::io_service& io_service, 
-            std::shared_ptr<dispatcher> d=std::shared_ptr<dispatcher>())
-        : m_socket(io_service), m_pac(1024), m_dispatcher(d),
+    session(boost::asio::io_service& io_service, std::shared_ptr<server_request_queue> server_queue)
+        : m_socket(io_service), m_pac(1024), m_server_queue(server_queue),
         m_writing(false)
     {
     }
@@ -173,9 +172,9 @@ public:
     }
 
     static std::shared_ptr<session> create(boost::asio::io_service &io_service,
-            std::shared_ptr<dispatcher> d=std::shared_ptr<dispatcher>())
+            std::shared_ptr<server_request_queue> server_queue=std::shared_ptr<server_request_queue>())
     {
-        return std::shared_ptr<session>(new session(io_service, d));
+        return std::shared_ptr<session>(new session(io_service, server_queue));
     }
 
     boost::asio::ip::tcp::socket& socket()
@@ -201,21 +200,21 @@ public:
     std::shared_ptr<func_call> call_async(const std::string &method)
     {
         auto request=m_request_factory.create(method);
-        return sendRequest(request);
+        return send_async(request);
     }
     // 1
     template<typename A1>
         std::shared_ptr<func_call> call_async(const std::string &method, A1 a1)
         {
             auto request=m_request_factory.create(method, a1);
-            return sendRequest(request);
+            return send_async(request);
         }
     // 2
     template<typename A1, typename A2>
         std::shared_ptr<func_call> call_async(const std::string &method, A1 a1, A2 a2)
         {
             auto request=m_request_factory.create(method, a1, a2);
-            return sendRequest(request);
+            return send_async(request);
         }
 
     // 0
@@ -223,7 +222,7 @@ public:
         R &call_sync(R *value, const std::string &method)
         {
             auto request=m_request_factory.create(method);
-            auto call=sendRequest(request);
+            auto call=send_async(request);
             call->sync().convert(value);
             return *value;
         }
@@ -232,7 +231,7 @@ public:
         R &call_sync(R *value, const std::string &method, A1 a1)
         {
             auto request=m_request_factory.create(method, a1);
-            auto call=sendRequest(request);
+            auto call=send_async(request);
             call->sync().convert(value);
             return *value;
         }
@@ -241,7 +240,7 @@ public:
         R &call_sync(R *value, const std::string &method, A1 a1, A2 a2)
         {
             auto request=m_request_factory.create(method, a1, a2);
-            auto call=sendRequest(request);
+            auto call=send_async(request);
             call->sync().convert(value);
             return *value;
         }
@@ -256,7 +255,7 @@ public:
                 [shared, pac](const boost::system::error_code &error,
                     size_t bytes_transferred)
                 {
-                auto dispatcher=shared->m_dispatcher.lock();
+                auto server_queue=shared->m_server_queue.lock();
                 if (error) {
                 int a=0;
                 // todo
@@ -279,14 +278,7 @@ public:
 
                     switch(rpc.type) {
                         case ::msgpack::rpc::REQUEST: 
-                            {
-                                ::msgpack::rpc::msg_request<object, object> req;
-                                msg.convert(&req);
-                                std::shared_ptr<msgpack::sbuffer> result=
-                                    dispatcher->request(
-                                            req.msgid, req.method, req.param);
-                                shared->enqueueWrite(result);
-                            }
+                            server_queue->enqueue(std::make_shared<queue_item>(msg, shared));
                             break;
 
                         case ::msgpack::rpc::RESPONSE: 
@@ -319,10 +311,10 @@ public:
 
                 }
                 catch(::msgpack::rpc::rpc_error ex){
-                    //shared->enqueueWrite(shared->create_error_message(msgid, ex));
+                    //shared->enqueue(shared->create_error_message(msgid, ex));
                 }
                 catch(...){
-                    //shared->enqueueWrite(shared->create_error_message(msgid, ::msgpack::rpc::rpc_error("unknown error")));
+                    //shared->enqueue(shared->create_error_message(msgid, ::msgpack::rpc::rpc_error("unknown error")));
                 }
 
                 pac->reset();
@@ -335,25 +327,8 @@ public:
                 });
     }
 
-private:
-    template<typename Parameter>
-        std::shared_ptr<func_call> sendRequest(const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq)
-        {
-    auto sbuf=std::make_shared<msgpack::sbuffer>();
-    ::msgpack::pack(*sbuf, msgreq);
-
-    std::stringstream ss;
-    ss << msgreq.method << msgreq.param;
-    auto req=std::make_shared<func_call>(ss.str());
-    m_requestMap.insert(std::make_pair(msgreq.msgid, req));
-
-    enqueueWrite(sbuf);
-
-    return req;
-        }
-
     // write
-    void enqueueWrite(std::shared_ptr<msgpack::sbuffer> msg)
+    void enqueue(std::shared_ptr<msgpack::sbuffer> msg)
     {
         // lock
         if(m_writing){
@@ -366,6 +341,23 @@ private:
             startWrite(msg);
         }
     }
+
+private:
+    template<typename Parameter>
+        std::shared_ptr<func_call> send_async(const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq)
+        {
+    auto sbuf=std::make_shared<msgpack::sbuffer>();
+    ::msgpack::pack(*sbuf, msgreq);
+
+    std::stringstream ss;
+    ss << msgreq.method << msgreq.param;
+    auto req=std::make_shared<func_call>(ss.str());
+    m_requestMap.insert(std::make_pair(msgreq.msgid, req));
+
+    enqueue(sbuf);
+
+    return req;
+        }
 
     void startWrite(std::shared_ptr<msgpack::sbuffer> msg)
     {
