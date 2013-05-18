@@ -10,11 +10,22 @@ class server
     boost::asio::io_service &m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
     std::list<std::weak_ptr<session>> m_sessions;
-    std::shared_ptr<received_msg_queue> m_request_queue;
+    typedef std::function<void(const object &msg, std::shared_ptr<session> session)> on_receive_t;
+    on_receive_t m_on_receive;
 public:
-    server(boost::asio::io_service &io_service)
-        : m_io_service(io_service), m_acceptor(io_service), m_request_queue(new received_msg_queue)
+    server(boost::asio::io_service &io_service, on_receive_t on_receive)
+        : m_io_service(io_service), m_acceptor(io_service), m_on_receive(on_receive)
     {
+    }
+
+    server(boost::asio::io_service &io_service, dispatcher &dispatcher)
+        : m_io_service(io_service), m_acceptor(io_service)
+    {
+        m_on_receive=[&dispatcher]
+            (const object &msg, std::shared_ptr<session> session)
+            {
+                dispatcher.post(msg, session);
+            };
     }
 
     ~server()
@@ -26,8 +37,6 @@ public:
             }
         }
     }
-
-    std::shared_ptr<received_msg_queue> get_request_queue(){ return m_request_queue; }
 
     void listen(boost::asio::ip::tcp::endpoint endpoint)
     {
@@ -45,13 +54,10 @@ public:
 private:
     void start_accept()
     {
-        auto self=this;
-        auto queue=m_request_queue;
-        auto new_connection = session::create(m_io_service, [queue](const object &msg, std::shared_ptr<session> session){
-					queue->enqueue(std::make_shared<msg_item>(msg, session));
-                });
-
+        auto new_connection = session::create(m_io_service, m_on_receive);
         m_sessions.push_back(new_connection);
+
+        auto self=this;
         m_acceptor.async_accept(new_connection->socket(),
                 [self, new_connection](const boost::system::error_code& error){
                 if (error){

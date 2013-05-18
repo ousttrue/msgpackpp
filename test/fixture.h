@@ -2,25 +2,29 @@
 
 struct Fixture 
 {
-    boost::asio::io_service server_io;
+    // dispatcher
+    boost::asio::io_service dispatcher_io;
 	msgpack::rpc::asio::dispatcher dispatcher;
+    std::shared_ptr<boost::thread> dispatcher_thread;
+
+    boost::asio::io_service server_io;
     msgpack::rpc::asio::server server;
     std::shared_ptr<boost::thread> server_thread;
 
     Fixture(int port) 
-        : server(server_io)
+        : dispatcher(dispatcher_io), server(server_io, dispatcher)
     {
         server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
-		auto io_service=&server_io;
-        server_thread=std::make_shared<boost::thread>([io_service]{ io_service->run(); });
+        server_thread=std::make_shared<boost::thread>([&]{ server_io.run(); });
 
         dispatcher.add_handler("zero", &Fixture::zero);
         dispatcher.add_handler("acc", &Fixture::unary);
         dispatcher.add_handler("add", &Fixture::binary);
-		dispatcher.start_thread(server.get_request_queue());
+        dispatcher_thread=std::make_shared<boost::thread>([&]{ dispatcher_io.run(); });
     }   
     ~Fixture() {
-        dispatcher.stop();
+        dispatcher_io.stop();
+        dispatcher_thread->join();
         server_io.stop();
         server_thread->join();
     }   

@@ -11,7 +11,8 @@ static float zero()
 
 BOOST_AUTO_TEST_CASE( dispatcher0 )
 {
-    msgpack::rpc::asio::dispatcher dispatcher;
+    boost::asio::io_service io_service;
+    msgpack::rpc::asio::dispatcher dispatcher(io_service);
 
     // function pointer
     dispatcher.add_handler("fp", &zero);
@@ -31,7 +32,8 @@ static bool unary(double n)
 
 BOOST_AUTO_TEST_CASE( dispatcher1 )
 {
-    msgpack::rpc::asio::dispatcher dispatcher;
+    boost::asio::io_service io_service;
+    msgpack::rpc::asio::dispatcher dispatcher(io_service);
 
     // function pointer
     dispatcher.add_handler("fp", &unary);
@@ -51,7 +53,8 @@ static int binary(int a, int b)
 
 BOOST_AUTO_TEST_CASE( dispatcher2 )
 {
-    msgpack::rpc::asio::dispatcher dispatcher;
+    boost::asio::io_service io_service;
+    msgpack::rpc::asio::dispatcher dispatcher(io_service);
 
     // function pointer
     dispatcher.add_handler("fp", &binary);

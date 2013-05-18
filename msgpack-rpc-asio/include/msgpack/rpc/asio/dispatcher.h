@@ -29,22 +29,22 @@ template<typename F, typename A1, typename A2>
 
 class dispatcher
 {
+    boost::asio::io_service &m_io_service;
+    boost::asio::io_service::work m_work;
     typedef std::function<
         std::shared_ptr<msgpack::sbuffer>(msgpack::rpc::msgid_t, msgpack::object)
         > func;
     std::map<std::string, func> m_handlerMap;
-    bool m_is_running;
     std::shared_ptr<boost::thread> m_thread;
 
 public:
-    dispatcher()
-        : m_is_running(false)
+    dispatcher(boost::asio::io_service &io_service)
+        : m_io_service(io_service), m_work(io_service)
     {
     }
 
     ~dispatcher()
     {
-        stop();
     }
 
     std::shared_ptr<msgpack::sbuffer> request(::msgpack::rpc::msgid_t msgid, 
@@ -63,46 +63,23 @@ public:
         }
     }
 
-    void start_thread(std::shared_ptr<received_msg_queue> queue)
+    void post(const object &msg, std::shared_ptr<session> session)
     {
-        if(m_thread){
-            return;
-        }
-        m_is_running=true;
+        auto self=this;
+        m_io_service.post([self, msg, session](){
+                self->dispatch(msg, session);
+                });
+    };
 
-        auto d=this;
-        m_thread=std::make_shared<boost::thread>([d, queue](){
-
-                while(d->m_is_running)
-                {
-                    auto item=queue->dequeue();
-                    if(item){
-
-                        // extract msgpack request
-                        ::msgpack::rpc::msg_request<msgpack::object, msgpack::object> req;
-                        item->get_msg().convert(&req);
-                        // execute callback
-                        std::shared_ptr<msgpack::sbuffer> result=d->request(
-                            req.msgid, req.method, req.param);
-                        // send 
-                        item->get_session()->enqueue_write(result);
-                    }
-
-                    // ToDo: queue cond
-                    boost::this_thread::sleep(boost::posix_time::milliseconds(300));
-                }
-
-				//std::cout << "stop dispatcher loop" << std::endl;
-            });
-    }
-
-    void stop()
+    void dispatch(const object &msg, std::shared_ptr<session> session)
     {
-        m_is_running=false;
-        if(m_thread){
-            m_thread->join();
-        }
-        m_thread=std::shared_ptr<boost::thread>();
+        // extract msgpack request
+        ::msgpack::rpc::msg_request<msgpack::object, msgpack::object> req;
+        msg.convert(&req);
+        // execute callback
+        std::shared_ptr<msgpack::sbuffer> result=request(req.msgid, req.method, req.param);
+        // send 
+        session->enqueue_write(result);
     }
 
     ////////////////////
