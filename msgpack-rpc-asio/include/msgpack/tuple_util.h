@@ -2,7 +2,7 @@
 namespace std {
 
     // 0
-    inline std::ostream &operator<<(std::ostream &os, const std::tr1::tuple<> &t)
+    inline std::ostream &operator<<(std::ostream &os, const std::tuple<> &t)
     {
         os << "()";
         return os;
@@ -10,7 +10,7 @@ namespace std {
 
     // 1
     template<typename A1>
-        inline std::ostream &operator<<(std::ostream &os, const std::tr1::tuple<A1> &t)
+        inline std::ostream &operator<<(std::ostream &os, const std::tuple<A1> &t)
         {
             os 
                 << "("
@@ -21,7 +21,7 @@ namespace std {
 
     // 2
     template<typename A1, typename A2>
-        inline std::ostream &operator<<(std::ostream &os, const std::tr1::tuple<A1, A2> &t)
+        inline std::ostream &operator<<(std::ostream &os, const std::tuple<A1, A2> &t)
         {
             os 
                 << "("

@@ -16,8 +16,8 @@ public:
         : m_msg(msg), m_session(session)
     {}
 
-    const object& msg()const{ return m_msg; }
-    std::shared_ptr<session> session()const{ return m_session.lock(); }
+    const object& get_msg()const{ return m_msg; }
+    std::shared_ptr<session> get_session()const{ return m_session.lock(); }
 };
 
 

@@ -80,12 +80,12 @@ public:
 
                         // extract msgpack request
                         ::msgpack::rpc::msg_request<msgpack::object, msgpack::object> req;
-                        item->msg().convert(&req);
+                        item->get_msg().convert(&req);
                         // execute callback
                         std::shared_ptr<msgpack::sbuffer> result=d->request(
                             req.msgid, req.method, req.param);
                         // send 
-                        item->session()->enqueue_write(result);
+                        item->get_session()->enqueue_write(result);
                     }
 
                     // ToDo: queue cond
@@ -102,7 +102,7 @@ public:
         if(m_thread){
             m_thread->join();
         }
-        m_thread=0;
+        m_thread=std::shared_ptr<boost::thread>();
     }
 
     ////////////////////
