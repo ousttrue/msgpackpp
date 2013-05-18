@@ -232,7 +232,7 @@ private:
             auto req=std::make_shared<func_call>(ss.str());
             m_request_map.insert(std::make_pair(msgreq.msgid, req));
 
-            m_session->enqueue_write(sbuf);
+            m_session->write_async(sbuf);
 
             return req;
         }

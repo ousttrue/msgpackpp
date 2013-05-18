@@ -57,7 +57,7 @@ public:
         // execute callback
         std::shared_ptr<msgpack::sbuffer> result=request(req.msgid, req.method, req.param);
         // send 
-        session->enqueue_write(result);
+        session->write_async(result);
     }
 
     ////////////////////

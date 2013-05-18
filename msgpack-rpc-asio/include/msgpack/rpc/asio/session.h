@@ -12,12 +12,9 @@ class session: public std::enable_shared_from_this<session>
     // on_read
     typedef std::function<void(const object &, std::shared_ptr<session>)> on_read_t;
     on_read_t m_on_read;
-    // write queue
-    bool m_writing;
-    std::list<std::shared_ptr<msgpack::sbuffer>> m_write_queue;
     // must shard_ptr
     session(boost::asio::io_service& io_service, on_read_t on_read)
-        : m_socket(io_service), m_pac(1024), m_on_read(on_read), m_writing(false)
+        : m_socket(io_service), m_pac(1024), m_on_read(on_read)
     {
     }
 public:
@@ -86,23 +83,7 @@ public:
                 });
     }
 
-    // write
-    void enqueue_write(std::shared_ptr<msgpack::sbuffer> msg)
-    {
-        // lock
-        if(m_writing){
-            // queueing...
-            m_write_queue.push_back(msg);
-        }
-        else{
-            // start async write
-            m_writing=true;
-            start_write(msg);
-        }
-    }
-
-private:
-   void start_write(std::shared_ptr<msgpack::sbuffer> msg)
+   void write_async(std::shared_ptr<msgpack::sbuffer> msg)
     {
         // for vc
         auto shared=shared_from_this();
@@ -115,18 +96,7 @@ private:
                 if(error){
                 std::cerr << "write error" << std::endl;
                 }
-
-                // lock
-                if(shared->m_write_queue.empty()){
-                shared->m_writing=false;
-                }
-                else{
-                shared->m_writing=true;
-                auto next_msg=shared->m_write_queue.front();
-                shared->m_write_queue.pop_front();
-                shared->start_write(next_msg);
-                }
-                });
+		});
     }
 
     /*
