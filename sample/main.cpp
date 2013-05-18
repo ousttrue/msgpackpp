@@ -13,11 +13,10 @@ int main(int argc, char **argv)
     boost::thread server_thread([&server_io](){ server_io.run(); });
 
     // dispatcher
-    auto queue=server.get_request_queue();
-    auto dispatcher=std::make_shared<msgpack::rpc::asio::dispatcher>();
-    dispatcher->add_handler("add", [](int a, int b)->int{ return a+b; });
-    dispatcher->add_handler("mul", [](float a, float b)->float{ return a*b; });
-    dispatcher->start_thread(server.get_request_queue());
+    msgpack::rpc::asio::dispatcher dispatcher;
+    dispatcher.add_handler("add", [](int a, int b)->int{ return a+b; });
+    dispatcher.add_handler("mul", [](float a, float b)->float{ return a*b; });
+    dispatcher.start_thread(server.get_request_queue());
 
     // client
     boost::asio::io_service client_io;
@@ -37,7 +36,7 @@ int main(int argc, char **argv)
     std::cout << "result = " << request->sync().convert(&result2) << std::endl;
 
     // stop asio
-	dispatcher->stop();
+	dispatcher.stop();
 
     client_io.stop();
     clinet_thread.join();

@@ -52,28 +52,28 @@ int main(int argc, char **argv)
     msgpack::rpc::asio::dispatcher dispatcher;
     dispatcher.add_handler("add", [](int a, int b)->int{ return a+b; });
     dispatcher.add_handler("mul", [](float a, float b)->float{ return a*b; });
-    dispatcher.start_thread();
+    dispatcher.start_thread(server.get_request_queue());
 
     // client
     boost::asio::io_service client_io;
-    auto client=msgpack::rpc::asio::session::create(client_io); 
-    client->connect(boost::asio::ip::tcp::endpoint(
+    msgpack::rpc::asio::client client(client_io); 
+    client.connect_async(boost::asio::ip::tcp::endpoint(
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT));
     boost::thread clinet_thread([&client_io](){ client_io.run(); });
 
-    // async request
-    auto request1=client->call_async("add", 1, 2);
-    int result1;
-    std::cout << request1->sync().convert(&result1) << std::endl;
+    // request
+	int result1;
+    std::cout << "add, 1, 2 = " << client.call_sync(&result1, "add", 1, 2) << std::endl;
 
-    // sync request
+    auto request=client.call_async("mul", 1.2f, 5.0f);
+    std::cout << *request << std::endl;
+
     float result2;
-    std::cout << client->call_sync(&result2, "mul", 1.2f, 5.0f) << std::endl;
-
-    // stop dispatcher thread
-    dispatcher.stop();
+    std::cout << "result = " << request->sync().convert(&result2) << std::endl;
 
     // stop asio
+	dispatcher.stop();
+
     client_io.stop();
     clinet_thread.join();
 
