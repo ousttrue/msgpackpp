@@ -74,7 +74,7 @@ public:
                         msg_params.convert(&params);
 
                         // call
-                        R result=call_with_tuple(handler, params);
+                        R result=std::call_with_tuple(handler, params);
 
                         // error type
                         typedef ::msgpack::type::nil Error;
@@ -101,7 +101,7 @@ public:
                         msg_params.convert(&params);
 
                         // call
-                        R result=call_with_tuple(handler, params);
+                        R result=std::call_with_tuple(handler, params);
 
                         // error type
                         typedef ::msgpack::type::nil Error;
@@ -128,7 +128,7 @@ public:
                         msg_params.convert(&params);
 
                         // call
-                        R result=call_with_tuple(handler, params);
+                        R result=std::call_with_tuple(handler, params);
 
                         // error type
                         typedef ::msgpack::type::nil Error;
