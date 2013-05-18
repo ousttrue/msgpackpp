@@ -5,28 +5,6 @@ namespace rpc {
 namespace asio {
 
 
-// handler call
-// 0
-template<typename F>
-    auto call_with_tuple(const F &handler, const std::tuple<> &args)->decltype(handler())
-    {
-        return handler();
-    }
-
-// 1
-template<typename F, typename A1>
-    auto call_with_tuple(const F &handler, const std::tuple<A1> &args)->decltype(handler(A1()))
-    {
-        return handler(std::get<0>(args));
-    }
-
-// 2
-template<typename F, typename A1, typename A2>
-    auto call_with_tuple(const F &handler, const std::tuple<A1, A2> &args)->decltype(handler(A1(), A2()))
-    {
-        return handler(std::get<0>(args), std::get<1>(args));
-    }
-
 class dispatcher
 {
     boost::asio::io_service &m_io_service;
