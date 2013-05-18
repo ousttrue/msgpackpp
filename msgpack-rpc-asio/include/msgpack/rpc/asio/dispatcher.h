@@ -142,12 +142,11 @@ public:
                         return sbuf;
                         }));
         }
-    // for lambda
+    // for lambda/std::function
     template<typename F>
         void add_handler(const std::string &method, F handler)
         {
-            typedef decltype(handler) functor;
-            add_handler(method, handler, &functor::operator());
+            add_handler(method, handler, &F::operator());
         }
 
     // for function pointer
@@ -170,28 +169,6 @@ public:
             add_handler(method, std::function<R(A1, A2)>(handler));
         }
 
-    // for std::function
-    // 0
-    template<typename R>
-        void add_handler(const std::string &method, std::function<R()> handler)
-        {
-            typedef decltype(handler) functor;
-            add_handler(method, handler, &functor::operator());
-        }
-    // 1
-    template<typename R, typename A1>
-        void add_handler(const std::string &method, std::function<R(A1)> handler)
-        {
-            typedef decltype(handler) functor;
-            add_handler(method, handler, &functor::operator());
-        }
-    // 2
-    template<typename R, typename A1, typename A2>
-        void add_handler(const std::string &method, std::function<R(A1, A2)> handler)
-        {
-            typedef decltype(handler) functor;
-            add_handler(method, handler, &functor::operator());
-        }
 };
 
 }
