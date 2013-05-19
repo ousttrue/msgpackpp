@@ -52,11 +52,10 @@ BOOST_AUTO_TEST_CASE( error_handling )
     }
     //   invalid argument type
     {
-        /*
         auto request=client.call_async("add", "a", "b");
         request->sync();
         BOOST_CHECK(request->is_error());
-        */
+        BOOST_CHECK_EQUAL(request->get_error_code(), msgpack::rpc::asio::error_params_convert);
     }
 
     client_io.stop();

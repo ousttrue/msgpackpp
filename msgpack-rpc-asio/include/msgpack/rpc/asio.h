@@ -5,6 +5,7 @@
 #include <functional>
 #include <msgpack/rpc/protocol.h>
 #include "../tuple_util.h"
+#include "../pack_util.h"
 
 namespace msgpack {
 namespace rpc {
