@@ -33,7 +33,7 @@ public:
 
         auto found=m_handlerMap.find(method_name);
         if(found==m_handlerMap.end()){
-            throw ::msgpack::rpc::no_method_error();
+            throw msgerror("no handler", error_dispatcher_no_handler);
         }
         else{
             auto func=found->second;
@@ -54,10 +54,16 @@ public:
         // extract msgpack request
         ::msgpack::rpc::msg_request<msgpack::object, msgpack::object> req;
         msg.convert(&req);
-        // execute callback
-        std::shared_ptr<msgpack::sbuffer> result=request(req.msgid, req.method, req.param);
-        // send 
-        session->write_async(result);
+        try{
+            // execute callback
+            std::shared_ptr<msgpack::sbuffer> result=request(req.msgid, req.method, req.param);
+            // send 
+            session->write_async(result);
+        }
+        catch(msgerror ex)
+        {
+            session->write_async(ex.to_msg(req.msgid));
+        }
     }
 
     ////////////////////
@@ -70,8 +76,20 @@ public:
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
                         // extract args
-                        std::tuple<> params;
-                        msg_params.convert(&params);
+                        typedef std::tuple<> Params;
+                        Params params;
+                        if(msg_params.type != type::ARRAY) { 
+                            throw msgerror("", error_params_not_array); 
+                        }
+                        if(msg_params.via.array.size>std::tuple_size<Params>::value){
+                            throw msgerror("", error_params_too_many); 
+                        }
+                        try {
+                            msg_params.convert(&params);
+                        }
+                        catch(msgpack::type_error){
+                            throw msgerror("fail to convert params", error_params_convert);
+                        }
 
                         // call
                         R result=std::call_with_tuple(handler, params);
@@ -97,8 +115,23 @@ public:
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
                         // extract args
-                        std::tuple<A1> params;
-                        msg_params.convert(&params);
+                        typedef std::tuple<A1> Params;
+                        Params params;
+                        if(msg_params.type != type::ARRAY) { 
+                            throw msgerror("", error_params_not_array); 
+                        }
+                        if(msg_params.via.array.size>std::tuple_size<Params>::value){
+                            throw msgerror("", error_params_too_many); 
+                        }
+                        else if(msg_params.via.array.size<std::tuple_size<Params>::value){
+                            throw msgerror("", error_params_not_enough); 
+                        }
+                        try {
+                            msg_params.convert(&params);
+                        }
+                        catch(msgpack::type_error){
+                            throw msgerror("fail to convert params", error_params_convert);
+                        }
 
                         // call
                         R result=std::call_with_tuple(handler, params);
@@ -124,8 +157,23 @@ public:
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
                         // extract args
-                        std::tuple<A1, A2> params;
-                        msg_params.convert(&params);
+                        typedef std::tuple<A1, A2> Params;
+                        Params params;
+                        if(msg_params.type != type::ARRAY) { 
+                            throw msgerror("", error_params_not_array); 
+                        }
+                        if(msg_params.via.array.size>std::tuple_size<Params>::value){
+                            throw msgerror("", error_params_too_many); 
+                        }
+                        else if(msg_params.via.array.size<std::tuple_size<Params>::value){
+                            throw msgerror("", error_params_not_enough); 
+                        }
+                        try {
+                            msg_params.convert(&params);
+                        }
+                        catch(msgpack::type_error){
+                            throw msgerror("fail to convert params", error_params_convert);
+                        }
 
                         // call
                         R result=std::call_with_tuple(handler, params);

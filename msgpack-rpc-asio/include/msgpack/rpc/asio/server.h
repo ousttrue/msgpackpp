@@ -61,7 +61,7 @@ private:
         m_acceptor.async_accept(new_connection->socket(),
                 [self, new_connection](const boost::system::error_code& error){
                 if (error){
-                    throw rpc_error("fail to accept ?");
+                    throw error;
                 }
                 else{
                     new_connection->start_read();

@@ -98,22 +98,6 @@ public:
                 }
 		});
     }
-
-    /*
-    template<typename E>
-        std::shared_ptr<msgpack::sbuffer> create_error_message(msgpack::rpc::msgid_t msgid, const E &error)
-        {
-            // error type
-            ::msgpack::rpc::msg_response<msgpack::type::nil, E> msgres(
-                    ::msgpack::type::nil(), 
-                    error, 
-                    msgid);
-            // result
-            auto sbuf=std::make_shared<msgpack::sbuffer>();
-            msgpack::pack(*sbuf, msgres);
-            return sbuf;
-        }
-    */
 };
 
 }}}

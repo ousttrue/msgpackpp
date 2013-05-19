@@ -51,6 +51,15 @@ public:
 };
 
 
+class func_call_error: public std::runtime_error
+{
+public:
+    func_call_error(const std::string &msg)
+        : std::runtime_error(msg)
+    {}
+};
+
+
 class func_call
 {
 public:
@@ -63,7 +72,6 @@ public:
 private:
     STATUS_TYPE m_status;
     ::msgpack::object m_result;
-    ::msgpack::object m_error;
     std::string m_request;
     boost::mutex m_mutex;
     boost::condition_variable_any m_cond;
@@ -76,7 +84,7 @@ public:
     void set_result(const ::msgpack::object &result)
     {
         if(m_status!=STATUS_WAIT){
-            throw rpc_error("already finishded");
+            throw func_call_error("already finishded");
         }
         boost::mutex::scoped_lock lock(m_mutex);
         m_result=result;
@@ -87,12 +95,23 @@ public:
     void set_error(const ::msgpack::object &error)
     {
         if(m_status!=STATUS_WAIT){
-            throw rpc_error("already finishded");
+            throw func_call_error("already finishded");
         }
         boost::mutex::scoped_lock lock(m_mutex);
-        m_error=error;
+        m_result=error;
         m_status=STATUS_ERROR;
         m_cond.notify_all();
+    }
+
+    bool is_error()const{ return m_status==STATUS_ERROR; }
+
+    error_code error()const{ 
+        if(m_status!=STATUS_ERROR){
+            throw func_call_error("no error !");
+        }
+        int value;
+        m_result.convert(&value);
+        return static_cast<error_code>(value);
     }
 
     // blocking
@@ -113,7 +132,7 @@ public:
                 return *value;
             }
             else{
-                throw rpc_error("not ready");
+                throw func_call_error("not ready");
             }
         }
 
@@ -145,6 +164,15 @@ inline std::ostream &operator<<(std::ostream &os, const func_call &request)
     os << request.string();
     return os;
 }
+
+
+class client_error: public std::runtime_error
+{
+public:
+    client_error(const std::string &msg)
+        : std::runtime_error(msg)
+    {}
+};
 
 
 class client
@@ -192,6 +220,7 @@ public:
             return send_async(request);
         }
 
+    // sync with response
     // 0
     template<typename R>
         R &call_sync(R *value, const std::string &method)
@@ -240,50 +269,41 @@ private:
 private:
 	void receive(const object &msg, std::shared_ptr<session> session)
 	{
-		::msgpack::rpc::msgid_t msgid=0;
-		try{
-			::msgpack::rpc::msg_rpc rpc;
-			msg.convert(&rpc);
+        ::msgpack::rpc::msg_rpc rpc;
+        msg.convert(&rpc);
+        switch(rpc.type) {
+            case ::msgpack::rpc::REQUEST: 
+                break;
 
-			switch(rpc.type) {
-			case ::msgpack::rpc::REQUEST: 
-				break;
+            case ::msgpack::rpc::RESPONSE: 
+                {
+                    ::msgpack::rpc::msg_response<object, object> res;
+                    msg.convert(&res);
+                    auto found=m_request_map.find(res.msgid);
+                    if(found!=m_request_map.end()){
+                        if(res.error.type==msgpack::type::NIL){
+                            found->second->set_result(res.result);
+                        }
+                        else{
+                            found->second->set_error(res.result);
+                        }
+                    }
+                    else{
+                        throw client_error("no request for response");
+                    }
+                }
+                break;
 
-			case ::msgpack::rpc::RESPONSE: 
-				{
-					::msgpack::rpc::msg_response<object, object> res;
-					msg.convert(&res);
-					auto found=m_request_map.find(res.msgid);
-					if(found!=m_request_map.end()){
-						// ToDo: error check
-						found->second->set_result(res.result);
-					}
-					else{
-						// ToDo:error
-						int a=0;
-					}
-				}
-				break;
+            case ::msgpack::rpc::NOTIFY: 
+                {
+                    ::msgpack::rpc::msg_notify<object, object> req;
+                    msg.convert(&req);
+                }
+                break;
 
-			case ::msgpack::rpc::NOTIFY: 
-				{
-					::msgpack::rpc::msg_notify<object, object> req;
-					msg.convert(&req);
-					//req.method, req.param);
-				}
-				break;
-
-			default:
-				throw msgpack::rpc::rpc_error("rpc type error");
-			}
-
-		}
-		catch(::msgpack::rpc::rpc_error ex){
-			//shared->enqueue(shared->create_error_message(msgid, ex));
-		}
-		catch(...){
-			//shared->enqueue(shared->create_error_message(msgid, ::msgpack::rpc::rpc_error("unknown error")));
-		}
+            default:
+                throw client_error("rpc type error");
+        }
 	}
 };
 
