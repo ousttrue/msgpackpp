@@ -25,7 +25,7 @@ do
     }
     buildoptions {
         "-std=c++0x",
-        "-Wno-deprecated",
+        --"-Wno-deprecated",
     }
     links {
         "boost_thread-mt",

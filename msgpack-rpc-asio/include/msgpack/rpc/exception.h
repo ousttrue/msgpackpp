@@ -18,7 +18,6 @@
 #ifndef MSGPACK_RPC_EXCEPTION_H__
 #define MSGPACK_RPC_EXCEPTION_H__
 
-#include "types.h"
 #include <stdexcept>
 
 namespace msgpack {
