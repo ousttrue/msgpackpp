@@ -71,13 +71,15 @@ public:
     };
 private:
     STATUS_TYPE m_status;
+    error_code m_error_code;
+    std::string m_error_msg;
     ::msgpack::object m_result;
     std::string m_request;
     boost::mutex m_mutex;
     boost::condition_variable_any m_cond;
 public:
     func_call(const std::string &s)
-        : m_status(STATUS_WAIT), m_request(s)
+        : m_status(STATUS_WAIT), m_request(s), m_error_code(success)
         {
         }
 
@@ -98,20 +100,22 @@ public:
             throw func_call_error("already finishded");
         }
         boost::mutex::scoped_lock lock(m_mutex);
-        m_result=error;
+        typedef std::tuple<int, std::string> CodeWithMsg;
+        CodeWithMsg codeWithMsg;
+        error.convert(&codeWithMsg);
         m_status=STATUS_ERROR;
+        m_error_code=static_cast<error_code>(std::get<0>(codeWithMsg));
+        m_error_msg=std::get<1>(codeWithMsg);
         m_cond.notify_all();
     }
 
     bool is_error()const{ return m_status==STATUS_ERROR; }
 
-    error_code error()const{ 
+    error_code get_error_code()const{ 
         if(m_status!=STATUS_ERROR){
             throw func_call_error("no error !");
         }
-        int value;
-        m_result.convert(&value);
-        return static_cast<error_code>(value);
+        return m_error_code;
     }
 
     // blocking

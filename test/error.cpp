@@ -34,21 +34,21 @@ BOOST_AUTO_TEST_CASE( error_handling )
         auto request=client.call_async("no_such_method");
         request->sync();
         BOOST_CHECK(request->is_error());
-        BOOST_CHECK_EQUAL(request->error(), msgpack::rpc::asio::error_dispatcher_no_handler);
+        BOOST_CHECK_EQUAL(request->get_error_code(), msgpack::rpc::asio::error_dispatcher_no_handler);
     }
     // too many arguments
     {
         auto request=client.call_async("acc", 1, 2);
         request->sync();
         BOOST_CHECK(request->is_error());
-        BOOST_CHECK_EQUAL(request->error(), msgpack::rpc::asio::error_params_too_many);
+        BOOST_CHECK_EQUAL(request->get_error_code(), msgpack::rpc::asio::error_params_too_many);
     }
     //  not enough arguments
     {
         auto request=client.call_async("add", 1);
         request->sync();
         BOOST_CHECK(request->is_error());
-        BOOST_CHECK_EQUAL(request->error(), msgpack::rpc::asio::error_params_not_enough);
+        BOOST_CHECK_EQUAL(request->get_error_code(), msgpack::rpc::asio::error_params_not_enough);
     }
     //   invalid argument type
     {

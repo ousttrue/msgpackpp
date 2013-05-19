@@ -32,8 +32,8 @@ public:
     std::shared_ptr<msgpack::sbuffer> to_msg(msgpack::rpc::msgid_t msgid)const
     {
         // error type
-        ::msgpack::rpc::msg_response<int, bool> msgres(
-                m_code,
+        ::msgpack::rpc::msg_response<std::tuple<int, std::string>, bool> msgres(
+                std::make_tuple(m_code, what()),
                 true,
                 msgid);
         // result
