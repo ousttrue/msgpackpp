@@ -19,25 +19,28 @@ ToDo
 Files
 -----
 ### msgpack-0.5.7
-- msgpack/src/*
+* msgpack/src/*
+
 <https://github.com/msgpack/msgpack-c>
 Apache License Version 2.0
 
 ### msgpack-rpc
-- msgpack-rpc-asio/include/msgpack/rpc/protocol.h
+* msgpack-rpc-asio/include/msgpack/rpc/protocol.h
+
 <https://github.com/msgpack/msgpack-rpc>
 Apache License Version 2.0
 
 ### msgpack-rpc-asio
-- msgpack/premake4.lua
-- msgpack-rpc-asio/premake4.lua
-- msgpack-rpc-asio/include/msgpack/rpc/asio.h
-- msgpack-rpc-asio/include/msgpack/rpc/asio/*
-- msgpack-rpc-asio/include/msgpack/tuple_util.h
-- sapmple/*
-- test/*
-- premake4.lua
-- README.md
+* msgpack/premake4.lua
+* msgpack-rpc-asio/premake4.lua
+* msgpack-rpc-asio/include/msgpack/rpc/asio.h
+* msgpack-rpc-asio/include/msgpack/rpc/asio/*
+* msgpack-rpc-asio/include/msgpack/tuple_util.h
+* sapmple/*
+* test/*
+* premake4.lua
+* README.md
+
 msgpackおよびmsgpack-rpcの本家と同じ Apache License Version 2.0
 
 Build
