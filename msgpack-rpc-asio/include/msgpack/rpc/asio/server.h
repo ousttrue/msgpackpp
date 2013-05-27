@@ -18,7 +18,8 @@ public:
     {
     }
 
-    server(boost::asio::io_service &io_service, dispatcher &dispatcher)
+    template<typename Dispatcher>
+    server(boost::asio::io_service &io_service, Dispatcher &dispatcher)
         : m_io_service(io_service), m_acceptor(io_service)
     {
         m_on_receive=[&dispatcher]

@@ -5,6 +5,47 @@ namespace rpc {
 namespace asio {
 
 
+    template<typename F, typename R, typename C, typename Params>
+        std::shared_ptr<msgpack::sbuffer> helper(
+                F handler,
+                ::msgpack::rpc::msgid_t msgid, 
+                ::msgpack::object msg_params)
+    {
+        // args check
+        if(msg_params.type != type::ARRAY) { 
+            throw msgerror("", error_params_not_array); 
+        }
+        if(msg_params.via.array.size>std::tuple_size<Params>::value){
+            throw msgerror("", error_params_too_many); 
+        }
+        else if(msg_params.via.array.size<std::tuple_size<Params>::value){
+            throw msgerror("", error_params_not_enough); 
+        }
+
+        // extract args
+        Params params;
+        try {
+            msg_params.convert(&params);
+        }
+        catch(msgpack::type_error){
+            throw msgerror("fail to convert params", error_params_convert);
+        }
+
+        // call
+        R result=std::call_with_tuple(handler, params);
+
+        ::msgpack::rpc::msg_response<R&, msgpack::type::nil> msgres(
+                result, 
+                msgpack::type::nil(), 
+                msgid);
+        // result
+        auto sbuf=std::make_shared<msgpack::sbuffer>();
+        msgpack::pack(*sbuf, msgres);
+        return sbuf;
+    }
+
+
+
 class dispatcher
 {
     boost::asio::io_service &m_io_service;
@@ -75,35 +116,8 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        // extract args
-                        typedef std::tuple<> Params;
-                        Params params;
-                        if(msg_params.type != type::ARRAY) { 
-                            throw msgerror("", error_params_not_array); 
-                        }
-                        if(msg_params.via.array.size>std::tuple_size<Params>::value){
-                            throw msgerror("", error_params_too_many); 
-                        }
-                        try {
-                            msg_params.convert(&params);
-                        }
-                        catch(msgpack::type_error){
-                            throw msgerror("fail to convert params", error_params_convert);
-                        }
-
-                        // call
-                        R result=std::call_with_tuple(handler, params);
-
-                        // error type
-                        typedef ::msgpack::type::nil Error;
-                        ::msgpack::rpc::msg_response<R&, Error> msgres(
-                            result, 
-                            msgpack::type::nil(), 
-                            msgid);
-                        // result
-                        auto sbuf=std::make_shared<msgpack::sbuffer>();
-                        msgpack::pack(*sbuf, msgres);
-                        return sbuf;
+                        return helper<F, R, C, std::tuple<>>(
+                            handler, msgid, msg_params);
                         }));
         }
     // 1
@@ -114,82 +128,41 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        // extract args
-                        typedef std::tuple<A1> Params;
-                        Params params;
-                        if(msg_params.type != type::ARRAY) { 
-                            throw msgerror("", error_params_not_array); 
-                        }
-                        if(msg_params.via.array.size>std::tuple_size<Params>::value){
-                            throw msgerror("", error_params_too_many); 
-                        }
-                        else if(msg_params.via.array.size<std::tuple_size<Params>::value){
-                            throw msgerror("", error_params_not_enough); 
-                        }
-                        try {
-                            msg_params.convert(&params);
-                        }
-                        catch(msgpack::type_error){
-                            throw msgerror("fail to convert params", error_params_convert);
-                        }
-
-                        // call
-                        R result=std::call_with_tuple(handler, params);
-
-                        // error type
-                        typedef ::msgpack::type::nil Error;
-                        ::msgpack::rpc::msg_response<R&, Error> msgres(
-                            result, 
-                            msgpack::type::nil(), 
-                            msgid);
-                        // result
-                        auto sbuf=std::make_shared<msgpack::sbuffer>();
-                        msgpack::pack(*sbuf, msgres);
-                        return sbuf;
+                        return helper<F, R, C, std::tuple<A1>>(
+                            handler, msgid, msg_params);
                         }));
         }
+
     // 2
-    template<typename F, typename R, typename C, typename A1, typename A2>
+    template<typename F, typename R, typename C, 
+        typename A1, typename A2>
         void add_handler(const std::string &method, F handler, R(C::*p)(A1, A2)const)
         {
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        // extract args
-                        typedef std::tuple<A1, A2> Params;
-                        Params params;
-                        if(msg_params.type != type::ARRAY) { 
-                            throw msgerror("", error_params_not_array); 
-                        }
-                        if(msg_params.via.array.size>std::tuple_size<Params>::value){
-                            throw msgerror("", error_params_too_many); 
-                        }
-                        else if(msg_params.via.array.size<std::tuple_size<Params>::value){
-                            throw msgerror("", error_params_not_enough); 
-                        }
-                        try {
-                            msg_params.convert(&params);
-                        }
-                        catch(msgpack::type_error){
-                            throw msgerror("fail to convert params", error_params_convert);
-                        }
+                        return helper<F, R, C, std::tuple<A1, A2>>(
+                            handler, msgid, msg_params);
 
-                        // call
-                        R result=std::call_with_tuple(handler, params);
-
-                        // error type
-                        typedef ::msgpack::type::nil Error;
-                        ::msgpack::rpc::msg_response<R&, Error> msgres(
-                            result, 
-                            msgpack::type::nil(), 
-                            msgid);
-                        // result
-                        auto sbuf=std::make_shared<msgpack::sbuffer>();
-                        msgpack::pack(*sbuf, msgres);
-                        return sbuf;
                         }));
         }
+
+    // 4
+    template<typename F, typename R, typename C, 
+        typename A1, typename A2, typename A3, typename A4>
+        void add_handler(const std::string &method, F handler, R(C::*p)(A1, A2, A3, A4)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                        return helper<F, R, C, std::tuple<A1, A2, A3, A4>>(
+                            handler, msgid, msg_params);
+
+                        }));
+        }
+
     // for lambda/std::function
     template<typename F>
         void add_handler(const std::string &method, F handler)
