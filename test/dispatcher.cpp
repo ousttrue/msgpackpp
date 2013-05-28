@@ -3,6 +3,19 @@
 #include <msgpack/rpc/asio.h>
 #include <boost/thread.hpp>
 
+class Dummy
+{
+public:
+    bool unary(int a)
+    {
+        return true;
+    }
+	int binary(int a, int b)
+	{ 
+		return a+b;
+	}
+};
+
 // 0
 static float zero()
 {
@@ -43,6 +56,11 @@ BOOST_AUTO_TEST_CASE( dispatcher1 )
 
     // std::function
     dispatcher.add_handler("std::function", std::function<bool(double)>(unary));
+
+    // std::bind
+	Dummy d;
+    dispatcher.add_bind("std::bind", &Dummy::unary, 
+            &d, std::placeholders::_1);
 }
 
 // 2
@@ -65,9 +83,9 @@ BOOST_AUTO_TEST_CASE( dispatcher2 )
     // std::function
     dispatcher.add_handler("std::function", std::function<int(int, int)>(binary));
 
-    /* ToDo ?
     // std::bind
-    dispatcher.add_handler("std::bind", std::bind(&binary, std::placeholders::_1, std::placeholders::_2));
-    */
+	Dummy d;
+    dispatcher.add_bind("std::bind", &Dummy::binary, 
+            &d, std::placeholders::_1, std::placeholders::_2);
 }
 

@@ -190,6 +190,22 @@ public:
             add_handler(method, std::function<R(A1, A2)>(handler));
         }
 
+    // for std::bind
+    // 1
+    template<typename R, typename C, typename A1, typename B1>
+        void add_bind(const std::string &method, R(C::*handler)(A1), 
+                C *self, B1 b1)
+        {
+            add_handler(method, std::function<R(A1)>(std::bind(handler, self, b1)));
+        }
+
+    // 2
+    template<typename R, typename C, typename A1, typename A2, typename B1, typename B2>
+        void add_bind(const std::string &method, R(C::*handler)(A1, A2), 
+                C *self, B1 b1, B2 b2)
+        {
+            add_handler(method, std::function<R(A1, A2)>(std::bind(handler, self, b1, b2)));
+        }
 };
 
 }
