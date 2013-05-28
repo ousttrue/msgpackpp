@@ -14,6 +14,14 @@ public:
 	{ 
 		return a+b;
 	}
+    int func3(int a, int b, int c)
+    {
+        return a+b+c;
+    }
+    int func4(int a, int b, int c, int d)
+    {
+        return a+b+c+d;
+    }
 };
 
 // 0
@@ -87,5 +95,57 @@ BOOST_AUTO_TEST_CASE( dispatcher2 )
 	Dummy d;
     dispatcher.add_bind("std::bind", &Dummy::binary, 
             &d, std::placeholders::_1, std::placeholders::_2);
+}
+
+// 3
+static int func3(int a, int b, int c)
+{
+    return a+b+c;
+}
+
+BOOST_AUTO_TEST_CASE( dispatcher3 )
+{
+    boost::asio::io_service io_service;
+    msgpack::rpc::asio::dispatcher dispatcher(io_service);
+
+    // function pointer
+    dispatcher.add_handler("fp", &func3);
+
+    // lambda
+    dispatcher.add_handler("lambda", [](int a, int b, int c){ return a+b+c; });
+
+    // std::function
+    dispatcher.add_handler("std::function", std::function<int(int, int, int)>(func3));
+
+    // std::bind
+	Dummy d;
+    dispatcher.add_bind("std::bind", &Dummy::func3, 
+            &d, std::placeholders::_1, std::placeholders::_2, 3);
+}
+
+// 4
+static int func4(int a, int b, int c, int d)
+{
+    return a+b+c+d;
+}
+
+BOOST_AUTO_TEST_CASE( dispatcher4 )
+{
+    boost::asio::io_service io_service;
+    msgpack::rpc::asio::dispatcher dispatcher(io_service);
+
+    // function pointer
+    dispatcher.add_handler("fp", &func4);
+
+    // lambda
+    dispatcher.add_handler("lambda", [](int a, int b, int c, int d){ return a+b+c+d; });
+
+    // std::function
+    dispatcher.add_handler("std::function", std::function<int(int, int, int, int)>(func4));
+
+    // std::bind
+	Dummy d;
+    dispatcher.add_bind("std::bind", &Dummy::func4, 
+            &d, std::placeholders::_1, std::placeholders::_2, 3, 4);
 }
 

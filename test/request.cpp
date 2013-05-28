@@ -47,3 +47,34 @@ BOOST_AUTO_TEST_CASE( request2 )
     }
 }
 
+BOOST_AUTO_TEST_CASE( request3 )
+{
+    msgpack::rpc::asio::request_factory factory;
+
+
+    {
+        auto request=factory.create("add", 1, 2, 3);
+        BOOST_CHECK_EQUAL(request.msgid, 1);
+        BOOST_CHECK_EQUAL(request.method, "add");
+        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1);
+        BOOST_CHECK_EQUAL(std::get<1>(request.param), 2);
+        BOOST_CHECK_EQUAL(std::get<2>(request.param), 3);
+    }
+}
+
+BOOST_AUTO_TEST_CASE( request4 )
+{
+    msgpack::rpc::asio::request_factory factory;
+
+
+    {
+        auto request=factory.create("add", 1, 2, 3, 4);
+        BOOST_CHECK_EQUAL(request.msgid, 1);
+        BOOST_CHECK_EQUAL(request.method, "add");
+        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1);
+        BOOST_CHECK_EQUAL(std::get<1>(request.param), 2);
+        BOOST_CHECK_EQUAL(std::get<2>(request.param), 3);
+        BOOST_CHECK_EQUAL(std::get<3>(request.param), 4);
+    }
+}
+

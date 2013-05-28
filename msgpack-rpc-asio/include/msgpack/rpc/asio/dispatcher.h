@@ -189,6 +189,21 @@ public:
                         }));
         }
 
+    // 3
+    template<typename F, typename R, typename C, 
+        typename A1, typename A2, typename A3>
+        void add_handler(const std::string &method, F handler, R(C::*p)(A1, A2, A3)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                        return helper<F, R, C, std::tuple<A1, A2, A3>>(
+                            handler, msgid, msg_params);
+
+                        }));
+        }
+
     // 4
     template<typename F, typename R, typename C, 
         typename A1, typename A2, typename A3, typename A4>
@@ -245,6 +260,18 @@ public:
         void add_handler(const std::string &method, R(*handler)(A1, A2))
         {
             add_handler(method, std::function<R(A1, A2)>(handler));
+        }
+    // 3
+    template<typename R, typename A1, typename A2, typename A3>
+        void add_handler(const std::string &method, R(*handler)(A1, A2, A3))
+        {
+            add_handler(method, std::function<R(A1, A2, A3)>(handler));
+        }
+    // 4
+    template<typename R, typename A1, typename A2, typename A3, typename A4>
+        void add_handler(const std::string &method, R(*handler)(A1, A2, A3, A4))
+        {
+            add_handler(method, std::function<R(A1, A2, A3, A4)>(handler));
         }
 
     // for std::bind

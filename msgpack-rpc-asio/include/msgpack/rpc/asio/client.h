@@ -48,6 +48,26 @@ public:
             return ::msgpack::rpc::msg_request<std::string, Parameter>(
                     method, Parameter(a1, a2), msgid);
         }
+    // 3
+    template<typename A1, typename A2, typename A3>
+        ::msgpack::rpc::msg_request<std::string, std::tuple<A1, A2, A3>> 
+        create(const std::string &method, A1 a1, A2 a2, A3 a3)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef std::tuple<A1, A2, A3> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(a1, a2, a3), msgid);
+        }
+    // 4
+    template<typename A1, typename A2, typename A3, typename A4>
+        ::msgpack::rpc::msg_request<std::string, std::tuple<A1, A2, A3, A4>> 
+        create(const std::string &method, A1 a1, A2 a2, A3 a3, A4 a4)
+        {
+            ::msgpack::rpc::msgid_t msgid = next_msgid();
+            typedef std::tuple<A1, A2, A3, A4> Parameter;
+            return ::msgpack::rpc::msg_request<std::string, Parameter>(
+                    method, Parameter(a1, a2, a3, a4), msgid);
+        }
 };
 
 
@@ -223,6 +243,21 @@ public:
             auto request=m_request_factory.create(method, a1, a2);
             return send_async(request);
         }
+    // 3
+    template<typename A1, typename A2, typename A3>
+        std::shared_ptr<func_call> call_async(const std::string &method, A1 a1, A2 a2, A3 a3)
+        {
+            auto request=m_request_factory.create(method, a1, a2, a3);
+            return send_async(request);
+        }
+    // 4
+    template<typename A1, typename A2, typename A3, typename A4>
+        std::shared_ptr<func_call> call_async(const std::string &method, A1 a1, A2 a2, A3 a3, A4 a4)
+        {
+            auto request=m_request_factory.create(method, a1, a2, a3, a4);
+            return send_async(request);
+        }
+
 
     // sync with response
     // 0
@@ -248,6 +283,24 @@ public:
         R &call_sync(R *value, const std::string &method, A1 a1, A2 a2)
         {
             auto request=m_request_factory.create(method, a1, a2);
+            auto call=send_async(request);
+            call->sync().convert(value);
+            return *value;
+        }
+    // 3
+    template<typename R, typename A1, typename A2, typename A3>
+        R &call_sync(R *value, const std::string &method, A1 a1, A2 a2, A3 a3)
+        {
+            auto request=m_request_factory.create(method, a1, a2, a3);
+            auto call=send_async(request);
+            call->sync().convert(value);
+            return *value;
+        }
+    // 4
+    template<typename R, typename A1, typename A2, typename A3, typename A4>
+        R &call_sync(R *value, const std::string &method, A1 a1, A2 a2, A3 a3, A4 a4)
+        {
+            auto request=m_request_factory.create(method, a1, a2, a3, a4);
             auto call=send_async(request);
             call->sync().convert(value);
             return *value;

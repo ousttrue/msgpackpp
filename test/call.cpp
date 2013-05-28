@@ -68,3 +68,46 @@ BOOST_AUTO_TEST_CASE( func2 )
     client_io.stop();
     client_thread.join();
 }
+
+BOOST_AUTO_TEST_CASE( func3 )
+{
+    const static int PORT=8070;
+
+    Fixture f(PORT);
+
+    // client
+    boost::asio::io_service client_io;
+	msgpack::rpc::asio::client client(client_io);
+    client.connect_async(boost::asio::ip::tcp::endpoint(
+                boost::asio::ip::address::from_string("127.0.0.1"), PORT));
+    boost::thread client_thread([&client_io](){ client_io.run(); });
+
+    // request
+    int result;
+    BOOST_CHECK_EQUAL(client.call_sync(&result, "add3", 3, 4, 5), 12);
+
+    client_io.stop();
+    client_thread.join();
+}
+
+BOOST_AUTO_TEST_CASE( func4 )
+{
+    const static int PORT=8070;
+
+    Fixture f(PORT);
+
+    // client
+    boost::asio::io_service client_io;
+	msgpack::rpc::asio::client client(client_io);
+    client.connect_async(boost::asio::ip::tcp::endpoint(
+                boost::asio::ip::address::from_string("127.0.0.1"), PORT));
+    boost::thread client_thread([&client_io](){ client_io.run(); });
+
+    // request
+    int result;
+    BOOST_CHECK_EQUAL(client.call_sync(&result, "add4", 3, 4, 5, 6), 18);
+
+    client_io.stop();
+    client_thread.join();
+}
+

@@ -20,6 +20,8 @@ struct Fixture
         dispatcher.add_handler("zero", &Fixture::zero);
         dispatcher.add_handler("acc", &Fixture::unary);
         dispatcher.add_handler("add", &Fixture::binary);
+        dispatcher.add_handler("add3", [](int a, int b, int c){ return a+b+c; });
+        dispatcher.add_handler("add4", [](int a, int b, int c, int d){ return a+b+c+d; });
         dispatcher_thread=std::make_shared<boost::thread>([&]{ dispatcher_io.run(); });
     }   
     ~Fixture() {
