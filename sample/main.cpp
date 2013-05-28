@@ -7,15 +7,25 @@ int main(int argc, char **argv)
     const static int PORT=8070;
 
     // dispatcher
-    boost::asio::io_service dispatcher_io;
-    msgpack::rpc::asio::dispatcher dispatcher(dispatcher_io);
+    msgpack::rpc::asio::dispatcher dispatcher;
     dispatcher.add_handler("add", [](int a, int b)->int{ return a+b; });
     dispatcher.add_handler("mul", [](float a, float b)->float{ return a*b; });
+
+    // dispatcher work
+    boost::asio::io_service dispatcher_io;
+    boost::asio::io_service::work work(dispatcher_io);
     boost::thread dispatcher_thread([&dispatcher_io](){ dispatcher_io.run(); });
 
     // server
     boost::asio::io_service server_io;
-    msgpack::rpc::asio::server server(server_io, dispatcher);
+    msgpack::rpc::asio::server server(server_io, [&dispatcher, &dispatcher_io](
+                const msgpack::object &msg, std::shared_ptr<msgpack::rpc::asio::session> session)
+            {
+                auto self=&dispatcher;
+                dispatcher_io.post([self, msg, session](){
+                    self->dispatch(msg, session);
+                });
+            });
     server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io](){ server_io.run(); });
 

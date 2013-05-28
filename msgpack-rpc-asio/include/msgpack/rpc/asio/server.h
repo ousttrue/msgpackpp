@@ -18,17 +18,6 @@ public:
     {
     }
 
-    template<typename Dispatcher>
-    server(boost::asio::io_service &io_service, Dispatcher &dispatcher)
-        : m_io_service(io_service), m_acceptor(io_service)
-    {
-        m_on_receive=[&dispatcher]
-            (const object &msg, std::shared_ptr<session> session)
-            {
-                dispatcher.post(msg, session);
-            };
-    }
-
     ~server()
     {
         for(auto it=m_sessions.begin(); it!=m_sessions.end(); ++it){

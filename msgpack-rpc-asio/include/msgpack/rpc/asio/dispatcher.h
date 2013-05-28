@@ -88,8 +88,6 @@ namespace asio {
 
 class dispatcher
 {
-    boost::asio::io_service &m_io_service;
-    boost::asio::io_service::work m_work;
     typedef std::function<
         std::shared_ptr<msgpack::sbuffer>(msgpack::rpc::msgid_t, msgpack::object)
         > func;
@@ -97,8 +95,7 @@ class dispatcher
     std::shared_ptr<boost::thread> m_thread;
 
 public:
-    dispatcher(boost::asio::io_service &io_service)
-        : m_io_service(io_service), m_work(io_service)
+    dispatcher()
     {
     }
 
@@ -121,14 +118,6 @@ public:
             return func(msgid, params);
         }
     }
-
-    void post(const object &msg, std::shared_ptr<session> session)
-    {
-        auto self=this;
-        m_io_service.post([self, msg, session](){
-                self->dispatch(msg, session);
-                });
-    };
 
     void dispatch(const object &msg, std::shared_ptr<session> session)
     {
