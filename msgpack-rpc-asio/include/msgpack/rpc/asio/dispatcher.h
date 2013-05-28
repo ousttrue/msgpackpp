@@ -44,6 +44,46 @@ namespace asio {
         return sbuf;
     }
 
+    // void
+    template<typename F, typename C, typename Params>
+        std::shared_ptr<msgpack::sbuffer> helper(
+                F handler,
+                ::msgpack::rpc::msgid_t msgid, 
+                ::msgpack::object msg_params)
+    {
+        // args check
+        if(msg_params.type != type::ARRAY) { 
+            throw msgerror("", error_params_not_array); 
+        }
+        if(msg_params.via.array.size>std::tuple_size<Params>::value){
+            throw msgerror("", error_params_too_many); 
+        }
+        else if(msg_params.via.array.size<std::tuple_size<Params>::value){
+            throw msgerror("", error_params_not_enough); 
+        }
+
+        // extract args
+        Params params;
+        try {
+            msg_params.convert(&params);
+        }
+        catch(msgpack::type_error){
+            throw msgerror("fail to convert params", error_params_convert);
+        }
+
+        // call
+        std::call_with_tuple_void(handler, params);
+
+        ::msgpack::rpc::msg_response<msgpack::type::nil, msgpack::type::nil> msgres(
+                msgpack::type::nil(), 
+                msgpack::type::nil(), 
+                msgid);
+
+        // result
+        auto sbuf=std::make_shared<msgpack::sbuffer>();
+        msgpack::pack(*sbuf, msgres);
+        return sbuf;
+    }
 
 
 class dispatcher
@@ -120,6 +160,7 @@ public:
                             handler, msgid, msg_params);
                         }));
         }
+
     // 1
     template<typename F, typename R, typename C, typename A1>
         void add_handler(const std::string &method, F handler, R(C::*p)(A1)const)
@@ -163,6 +204,22 @@ public:
                         }));
         }
 
+    // void
+    // 4
+    template<typename F, typename C, 
+        typename A1, typename A2, typename A3, typename A4>
+        void add_handler(const std::string &method, F handler, void(C::*p)(A1, A2, A3, A4)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                        return helper<F, C, std::tuple<A1, A2, A3, A4>>(
+                            handler, msgid, msg_params);
+
+                        }));
+        }
+
     // for lambda/std::function
     template<typename F>
         void add_handler(const std::string &method, F handler)
@@ -191,8 +248,17 @@ public:
         }
 
     // for std::bind
+    // 0
+    template<typename R, typename C>
+        void add_bind(const std::string &method, R(C::*handler)(), 
+                C *self)
+        {
+            add_handler(method, std::function<R()>(std::bind(handler, self)));
+        }
+
     // 1
-    template<typename R, typename C, typename A1, typename B1>
+    template<typename R, typename C, typename A1, 
+        typename B1>
         void add_bind(const std::string &method, R(C::*handler)(A1), 
                 C *self, B1 b1)
         {
@@ -200,8 +266,66 @@ public:
         }
 
     // 2
-    template<typename R, typename C, typename A1, typename A2, typename B1, typename B2>
+    template<typename R, typename C, typename A1, typename A2, 
+        typename B1, typename B2>
         void add_bind(const std::string &method, R(C::*handler)(A1, A2), 
+                C *self, B1 b1, B2 b2)
+        {
+            add_handler(method, std::function<R(A1, A2)>(
+                        std::bind(handler, self, b1, b2)));
+        }
+
+    // 3
+    template<typename R, typename C, typename A1, typename A2, typename A3, 
+        typename B1, typename B2, typename B3>
+        void add_bind(const std::string &method, R(C::*handler)(A1, A2, A3), 
+                C *self, B1 b1, B2 b2, B3 b3)
+        {
+            add_handler(method, std::function<R(A1, A2, A3)>(
+                        std::bind(handler, self, b1, b2, b3)));
+        }
+
+    // 4
+    template<typename R, typename C, typename A1, typename A2, typename A3, typename A4,
+        typename B1, typename B2, typename B3, typename B4>
+        void add_bind(const std::string &method, R(C::*handler)(A1, A2, A3, A4), 
+                C *self, B1 b1, B2 b2, B3 b3, B4 b4)
+        {
+            add_handler(method, std::function<R(A1, A2, A3, A4)>(
+                        std::bind(handler, self, b1, b2, b3, b4)));
+        }
+
+    // for std::bind(void)
+    // 4
+    template<typename C, typename A1, typename A2, typename A3, typename A4,
+        typename B1, typename B2, typename B3, typename B4>
+        void add_bind(const std::string &method, void(C::*handler)(A1, A2, A3, A4), 
+                C *self, B1 b1, B2 b2, B3 b3, B4 b4)
+        {
+            add_handler(method, std::function<void(A1, A2, A3, A4)>(
+                        std::bind(handler, self, b1, b2, b3, b4)));
+        }
+
+    // for std::bind(const)
+    // 0
+    template<typename R, typename C>
+        void add_bind(const std::string &method, R(C::*handler)()const, 
+                C *self)
+        {
+            add_handler(method, std::function<R()>(std::bind(handler, self)));
+        }
+
+    // 1
+    template<typename R, typename C, typename A1, typename B1>
+        void add_bind(const std::string &method, R(C::*handler)(A1)const, 
+                C *self, B1 b1)
+        {
+            add_handler(method, std::function<R(A1)>(std::bind(handler, self, b1)));
+        }
+
+    // 2
+    template<typename R, typename C, typename A1, typename A2, typename B1, typename B2>
+        void add_bind(const std::string &method, R(C::*handler)(A1, A2)const, 
                 C *self, B1 b1, B2 b2)
         {
             add_handler(method, std::function<R(A1, A2)>(std::bind(handler, self, b1, b2)));

@@ -66,6 +66,14 @@ namespace std {
         {
             return handler(std::get<0>(args), std::get<1>(args), std::get<2>(args), std::get<3>(args));
         }
+
+    // void
+    // 4
+    template<typename F, typename A1, typename A2, typename A3, typename A4>
+        void call_with_tuple_void(const F &handler, const std::tuple<A1, A2, A3, A4> &args)
+        {
+            handler(std::get<0>(args), std::get<1>(args), std::get<2>(args), std::get<3>(args));
+        }
 }
 
 
