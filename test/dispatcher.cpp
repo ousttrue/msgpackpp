@@ -33,7 +33,7 @@ static float zero()
 BOOST_AUTO_TEST_CASE( dispatcher0 )
 {
     boost::asio::io_service io_service;
-    msgpack::rpc::asio::dispatcher dispatcher(io_service);
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
     dispatcher.add_handler("fp", &zero);
@@ -54,7 +54,7 @@ static bool unary(double n)
 BOOST_AUTO_TEST_CASE( dispatcher1 )
 {
     boost::asio::io_service io_service;
-    msgpack::rpc::asio::dispatcher dispatcher(io_service);
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
     dispatcher.add_handler("fp", &unary);
@@ -80,7 +80,7 @@ static int binary(int a, int b)
 BOOST_AUTO_TEST_CASE( dispatcher2 )
 {
     boost::asio::io_service io_service;
-    msgpack::rpc::asio::dispatcher dispatcher(io_service);
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
     dispatcher.add_handler("fp", &binary);
@@ -106,7 +106,7 @@ static int func3(int a, int b, int c)
 BOOST_AUTO_TEST_CASE( dispatcher3 )
 {
     boost::asio::io_service io_service;
-    msgpack::rpc::asio::dispatcher dispatcher(io_service);
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
     dispatcher.add_handler("fp", &func3);
@@ -132,7 +132,7 @@ static int func4(int a, int b, int c, int d)
 BOOST_AUTO_TEST_CASE( dispatcher4 )
 {
     boost::asio::io_service io_service;
-    msgpack::rpc::asio::dispatcher dispatcher(io_service);
+    msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
     dispatcher.add_handler("fp", &func4);

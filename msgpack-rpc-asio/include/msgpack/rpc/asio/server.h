@@ -13,6 +13,11 @@ class server
     typedef std::function<void(const object &msg, std::shared_ptr<session> session)> on_receive_t;
     on_receive_t m_on_receive;
 public:
+    server(boost::asio::io_service &io_service)
+		: m_io_service(io_service), m_acceptor(io_service)
+	{
+	}
+
     server(boost::asio::io_service &io_service, on_receive_t on_receive)
         : m_io_service(io_service), m_acceptor(io_service), m_on_receive(on_receive)
     {
@@ -27,6 +32,11 @@ public:
             }
         }
     }
+
+	void set_on_receive(on_receive_t on_receive)
+	{
+		m_on_receive=on_receive;
+	}
 
     void listen(boost::asio::ip::tcp::endpoint endpoint)
     {
