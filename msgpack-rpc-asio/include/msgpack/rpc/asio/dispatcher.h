@@ -446,7 +446,7 @@ public:
                     if(!self){
                     throw msgerror("fail to convert params", error_self_pointer_is_null);
                     }
-                    return self->*getMethod();
+                    return (self->*getMethod)();
                     });
             add_handler(std::string("set_")+property, [thisGetter, setMethod](
                         const V& value){
@@ -454,7 +454,7 @@ public:
                     if(!self){
                     throw msgerror("fail to convert params", error_self_pointer_is_null);
                     }
-                    self->*setMethod(value);
+                    (self->*setMethod)(value);
                     });
         }
 

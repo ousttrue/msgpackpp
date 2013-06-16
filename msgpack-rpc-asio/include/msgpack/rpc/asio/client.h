@@ -258,6 +258,15 @@ public:
             return send_async(request);
         }
 
+    // sync without response
+    // 1
+    template<typename A1>
+        void call_sync_void(const std::string &method, A1 a1)
+        {
+            auto request=m_request_factory.create(method, a1);
+            auto call=send_async(request);
+            call->sync();
+        }
 
     // sync with response
     // 0

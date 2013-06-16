@@ -59,6 +59,16 @@ Sample
 #include <boost/thread.hpp>
 
 
+class SomeClass
+{
+    int m_number;
+
+public:
+    void setNumber(const int &number){ m_number=number; }
+    int getNumber()const{ return m_number; }
+};
+
+
 int main(int argc, char **argv)
 {
     const static int PORT=8070;
@@ -67,21 +77,19 @@ int main(int argc, char **argv)
     msgpack::rpc::asio::dispatcher dispatcher;
     dispatcher.add_handler("add", [](int a, int b)->int{ return a+b; });
     dispatcher.add_handler("mul", [](float a, float b)->float{ return a*b; });
-
-    // dispatcher work
-    boost::asio::io_service dispatcher_io;
-    boost::asio::io_service::work work(dispatcher_io);
-    boost::thread dispatcher_thread([&dispatcher_io](){ dispatcher_io.run(); });
+    SomeClass s;
+	dispatcher.add_property("number", std::function<SomeClass*()>([&s](){ return &s; })
+            , &SomeClass::getNumber
+            , &SomeClass::setNumber
+            );
 
     // server
     boost::asio::io_service server_io;
-    msgpack::rpc::asio::server server(server_io, [&dispatcher, &dispatcher_io](
-                const msgpack::object &msg, std::shared_ptr<msgpack::rpc::asio::session> session)
+    msgpack::rpc::asio::server server(server_io, [&dispatcher](
+                const msgpack::object &msg, 
+                std::shared_ptr<msgpack::rpc::asio::session> session)
             {
-                auto self=&dispatcher;
-                dispatcher_io.post([self, msg, session](){
-                    self->dispatch(msg, session);
-                });
+                dispatcher.dispatch(msg, session);
             });
     server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
     boost::thread server_thread([&server_io](){ server_io.run(); });
@@ -93,20 +101,26 @@ int main(int argc, char **argv)
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT));
     boost::thread clinet_thread([&client_io](){ client_io.run(); });
 
-    // request
+    // sync request
 	int result1;
     std::cout << "add, 1, 2 = " << client.call_sync(&result1, "add", 1, 2) << std::endl;
 
-    auto request=client.call_async("mul", 1.2f, 5.0f);
-    std::cout << *request << std::endl;
-
+    // async request
+    auto request2=client.call_async("mul", 1.2f, 5.0f);
+    std::cout << *request2 << std::endl;
     float result2;
-    std::cout << "result = " << request->sync().convert(&result2) << std::endl;
+    std::cout << "result = " << request2->sync().convert(&result2) << std::endl;
+
+    // property
+    auto request3=client.call_async("set_number", 64);
+    std::cout << *request3 << std::endl;
+    request3->sync();
+
+    request3=client.call_sync("get_number");
+    request3->sync();
+    std::cout << *request3 << std::endl;
 
     // stop asio
-	dispatcher_io.stop();
-    dispatcher_thread.join();
-
     client_io.stop();
     clinet_thread.join();
 
@@ -116,3 +130,12 @@ int main(int argc, char **argv)
     return 0;
 }
 ```
+
+```
+add, 1, 2 = 3
+mul(1.2, 5) = ?
+result = 6
+set_number(64) = ?
+get_number() = 64
+```
+
