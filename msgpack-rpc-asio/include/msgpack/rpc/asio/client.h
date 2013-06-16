@@ -341,8 +341,15 @@ private:
                         if(res.error.type==msgpack::type::NIL){
                             found->second->set_result(res.result);
                         }
-                        else{
-                            found->second->set_error(res.result);
+                        else if(res.error.type==msgpack::type::BOOLEAN){
+							bool isError;
+							res.error.convert(&isError);
+							if(isError){
+								found->second->set_error(res.result);
+							}
+							else{
+								found->second->set_result(res.result);
+							}
                         }
                     }
                     else{

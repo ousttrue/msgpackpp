@@ -14,7 +14,7 @@ class session: public std::enable_shared_from_this<session>
     on_read_t m_on_read;
     // must shard_ptr
     session(boost::asio::io_service& io_service, on_read_t on_read)
-        : m_socket(io_service), m_pac(1024), m_on_read(on_read)
+        : m_socket(io_service), m_pac(1024 * 1024), m_on_read(on_read)
     {
     }
 public:
@@ -46,6 +46,21 @@ public:
                 }); 
     }
 
+    static std::shared_ptr<msgpack::sbuffer> error_notify(const std::string &msg)
+    {
+        // notify type
+        ::msgpack::rpc::msg_notify<std::string, std::string> notify(
+                // method
+                "error_notify",
+                // params
+                msg
+                );
+        // result
+        auto sbuf=std::make_shared<msgpack::sbuffer>();
+        msgpack::pack(*sbuf, notify);
+        return sbuf;
+    }
+
     void start_read()
     {
         auto pac=&m_pac;
@@ -56,17 +71,38 @@ public:
                     size_t bytes_transferred)
                 {
                     if (error) {
-                        //throw rpc_error("asio error ?");
+						auto notify=error_notify(std::string("rpc server message: ")+error.message());
+						shared->write_async(notify);
+						// no more read
+						return;
                     }
                     else {
-                        //char *p=pac->buffer();
                         pac->buffer_consumed(bytes_transferred);
-                        //msgpack::unpacked result;
 
                         // extract object
-                        while(pac->execute()) {
+                        while(true) {
+							try{
+								if(!pac->execute()){
+									break;
+								}
+							}
+							catch(unpack_error ex){
+								auto msg=error_notify("msgpack::unpack_error. maybe msgpack buffer over flow by crupped msg");
+								shared->write_async(msg);
+								// no more read
+								// todo: close after write
+								return;
+							}
+							catch(...){
+								auto msg=error_notify("unknown error");
+								shared->write_async(msg);
+								// no more read
+								// todo: close after write
+								return;
+							}
+
+                            // valid msgpack message
                             size_t size=pac->parsed_size();
-                            // msgpack message
                             ::msgpack::object msg = pac->data();
 
                             if(shared->m_on_read){
@@ -74,7 +110,6 @@ public:
                             }
 
                             pac->reset();
-                            //p+=size;
                         }
 
                         // read loop
@@ -94,7 +129,7 @@ public:
                     size_t bytes_transferred)
                 {
                 if(error){
-                std::cerr << "write error" << std::endl;
+                std::cerr << error.message() << std::endl;
                 }
 		});
     }

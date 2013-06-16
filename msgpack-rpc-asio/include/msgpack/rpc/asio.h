@@ -19,6 +19,8 @@ enum error_code
     error_params_too_many,
     error_params_not_enough,
     error_params_convert,
+    error_not_implemented,
+    error_self_pointer_is_null,
 };
 
 class msgerror: std::runtime_error

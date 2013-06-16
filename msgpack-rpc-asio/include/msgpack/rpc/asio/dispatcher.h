@@ -1,4 +1,9 @@
 #pragma once
+#pragma warning(push)
+#pragma warning(disable: 4819)        //warning about encoding of charactor in source code.
+#include <boost/type_traits.hpp>
+#pragma warning(pop)
+
 
 namespace msgpack {
 namespace rpc {
@@ -13,13 +18,13 @@ namespace asio {
     {
         // args check
         if(msg_params.type != type::ARRAY) { 
-            throw msgerror("", error_params_not_array); 
+            throw msgerror("error_params_not_array", error_params_not_array); 
         }
         if(msg_params.via.array.size>std::tuple_size<Params>::value){
-            throw msgerror("", error_params_too_many); 
+            throw msgerror("error_params_too_many", error_params_too_many); 
         }
         else if(msg_params.via.array.size<std::tuple_size<Params>::value){
-            throw msgerror("", error_params_not_enough); 
+            throw msgerror("error_params_not_enough", error_params_not_enough); 
         }
 
         // extract args
@@ -34,9 +39,9 @@ namespace asio {
         // call
         R result=std::call_with_tuple(handler, params);
 
-        ::msgpack::rpc::msg_response<R&, msgpack::type::nil> msgres(
+        ::msgpack::rpc::msg_response<R&, bool> msgres(
                 result, 
-                msgpack::type::nil(), 
+				false, 
                 msgid);
         // result
         auto sbuf=std::make_shared<msgpack::sbuffer>();
@@ -53,13 +58,13 @@ namespace asio {
     {
         // args check
         if(msg_params.type != type::ARRAY) { 
-            throw msgerror("", error_params_not_array); 
+            throw msgerror("error_params_not_array", error_params_not_array); 
         }
         if(msg_params.via.array.size>std::tuple_size<Params>::value){
-            throw msgerror("", error_params_too_many); 
+            throw msgerror("error_params_too_many", error_params_too_many); 
         }
         else if(msg_params.via.array.size<std::tuple_size<Params>::value){
-            throw msgerror("", error_params_not_enough); 
+            throw msgerror("error_params_not_enough", error_params_not_enough); 
         }
 
         // extract args
@@ -74,9 +79,9 @@ namespace asio {
         // call
         std::call_with_tuple_void(handler, params);
 
-        ::msgpack::rpc::msg_response<msgpack::type::nil, msgpack::type::nil> msgres(
+        ::msgpack::rpc::msg_response<msgpack::type::nil, bool> msgres(
                 msgpack::type::nil(), 
-                msgpack::type::nil(), 
+                false, 
                 msgid);
 
         // result
@@ -158,7 +163,8 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        return helper<F, R, C, std::tuple<A1>>(
+                        typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+                        return helper<F, R, C, std::tuple<B1>>(
                             handler, msgid, msg_params);
                         }));
         }
@@ -171,11 +177,13 @@ public:
             m_handlerMap.insert(std::make_pair(method, [handler](
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
-                        {
-                        return helper<F, R, C, std::tuple<A1, A2>>(
-                            handler, msgid, msg_params);
+			{
+				typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+				typedef boost::remove_const<boost::remove_reference<A2>::type>::type B2;
+				return helper<F, R, C, std::tuple<B1, B2>>(
+					handler, msgid, msg_params);
 
-                        }));
+			}));
         }
 
     // 3
@@ -187,7 +195,10 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        return helper<F, R, C, std::tuple<A1, A2, A3>>(
+                        typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+                        typedef boost::remove_const<boost::remove_reference<A2>::type>::type B2;
+                        typedef boost::remove_const<boost::remove_reference<A3>::type>::type B3;
+                        return helper<F, R, C, std::tuple<B1, B2, B3>>(
                             handler, msgid, msg_params);
 
                         }));
@@ -202,13 +213,83 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        return helper<F, R, C, std::tuple<A1, A2, A3, A4>>(
+                        typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+                        typedef boost::remove_const<boost::remove_reference<A2>::type>::type B2;
+                        typedef boost::remove_const<boost::remove_reference<A3>::type>::type B3;
+                        typedef boost::remove_const<boost::remove_reference<A4>::type>::type B4;
+                        return helper<F, R, C, std::tuple<B1, B2, B3, B4>>(
                             handler, msgid, msg_params);
 
                         }));
         }
 
     // void
+    // 0
+    template<typename F, typename C
+        >
+        void add_handler(const std::string &method, F handler, void(C::*p)()const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                        return helper<F, C, std::tuple<>>(
+                            handler, msgid, msg_params);
+
+                        }));
+        }
+
+    // 1
+    template<typename F, typename C, 
+        typename A1>
+        void add_handler(const std::string &method, F handler, void(C::*p)(A1)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                        typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+                        return helper<F, C, std::tuple<B1>>(
+                            handler, msgid, msg_params);
+
+                        }));
+        }
+
+    // 2
+    template<typename F, typename C, 
+        typename A1, typename A2>
+        void add_handler(const std::string &method, F handler, void(C::*p)(A1, A2)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                        typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+                        typedef boost::remove_const<boost::remove_reference<A2>::type>::type B2;
+                        return helper<F, C, std::tuple<B1, B2>>(
+                            handler, msgid, msg_params);
+
+                        }));
+        }
+
+    // 3
+    template<typename F, typename C, 
+        typename A1, typename A2, typename A3>
+        void add_handler(const std::string &method, F handler, void(C::*p)(A1, A2, A3)const)
+        {
+            m_handlerMap.insert(std::make_pair(method, [handler](
+                            ::msgpack::rpc::msgid_t msgid, 
+                            ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
+                        {
+                        typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+                        typedef boost::remove_const<boost::remove_reference<A2>::type>::type B2;
+                        typedef boost::remove_const<boost::remove_reference<A3>::type>::type B3;
+                        return helper<F, C, std::tuple<B1, B2, B3>>(
+                            handler, msgid, msg_params);
+
+                        }));
+        }
+
     // 4
     template<typename F, typename C, 
         typename A1, typename A2, typename A3, typename A4>
@@ -218,7 +299,11 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        return helper<F, C, std::tuple<A1, A2, A3, A4>>(
+                        typedef boost::remove_const<boost::remove_reference<A1>::type>::type B1;
+                        typedef boost::remove_const<boost::remove_reference<A2>::type>::type B2;
+                        typedef boost::remove_const<boost::remove_reference<A3>::type>::type B3;
+                        typedef boost::remove_const<boost::remove_reference<A4>::type>::type B4;
+                        return helper<F, C, std::tuple<B1, B2, B3, B4>>(
                             handler, msgid, msg_params);
 
                         }));
@@ -346,6 +431,98 @@ public:
         {
             add_handler(method, std::function<R(A1, A2)>(std::bind(handler, self, b1, b2)));
         }
+
+    // utility
+    template<typename T, typename V>
+        void add_property(const std::string &property,
+                std::function<T*()> thisGetter,
+                V(T::*getMethod)()const,
+                void(T::*setMethod)(const V&)
+                )
+        {
+            add_handler(std::string("get_")+property, [thisGetter, getMethod](
+                        )->V{
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    return self->*getMethod();
+                    });
+            add_handler(std::string("set_")+property, [thisGetter, setMethod](
+                        const V& value){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    self->*setMethod(value);
+                    });
+        }
+
+    // ToDo
+    // removeMethod
+    // movefromtoMethod
+    template<typename T, typename V>
+        void add_list_property(const std::string &property,
+                std::function<T*()> thisGetter,
+                void(T::*clearMethod)(),
+                void(T::*addMethod)(const V&),
+                void(T::*updateMethod)(const V&),
+                void(T::*removeAtMethod)(size_t),
+                std::list<V>(T::*listMethod)()const              
+                )
+        {
+            if(clearMethod){
+            add_handler(std::string("clear_")+property, [thisGetter, clearMethod](
+                        ){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    (self->*clearMethod)();
+                    });
+            }
+            if(addMethod){
+            add_handler(std::string("additem_")+property, [thisGetter, addMethod](
+                        const V &item){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    (self->*addMethod)(item);
+                    });
+            }
+            if(updateMethod){
+            add_handler(std::string("updateitem_")+property, [thisGetter, updateMethod](
+                        const V &item){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    (self->*updateMethod)(item);
+                    });
+            }
+            if(removeAtMethod){
+            add_handler(std::string("removeat_")+property, [thisGetter, removeAtMethod](
+                        size_t index){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    (self->*removeAtMethod)(index);
+                    });
+            }
+            if(listMethod){
+            add_handler(std::string("list_")+property, [thisGetter, listMethod](
+                        )->std::list<V>{
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    return (self->*listMethod)();
+                    });
+            }
+        }
+
 };
 
 }

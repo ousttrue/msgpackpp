@@ -97,6 +97,30 @@ namespace std {
         }
 
     // call_with_tuple_void
+    // 0
+    template<typename F>
+        void call_with_tuple_void(const F &handler, const std::tuple<> &args)
+        {
+            handler();
+        }
+    // 1
+    template<typename F, typename A1>
+        void call_with_tuple_void(const F &handler, const std::tuple<A1> &args)
+        {
+            handler(std::get<0>(args));
+        }
+    // 2
+    template<typename F, typename A1, typename A2>
+        void call_with_tuple_void(const F &handler, const std::tuple<A1, A2> &args)
+        {
+            handler(std::get<0>(args), std::get<1>(args));
+        }
+    // 3
+    template<typename F, typename A1, typename A2, typename A3>
+        void call_with_tuple_void(const F &handler, const std::tuple<A1, A2, A3> &args)
+        {
+            handler(std::get<0>(args), std::get<1>(args), std::get<2>(args));
+        }
     // 4
     template<typename F, typename A1, typename A2, typename A3, typename A4>
         void call_with_tuple_void(const F &handler, const std::tuple<A1, A2, A3, A4> &args)
