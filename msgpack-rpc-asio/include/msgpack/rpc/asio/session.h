@@ -5,6 +5,22 @@ namespace rpc {
 namespace asio {
 
 
+inline std::shared_ptr<msgpack::sbuffer> error_notify(const std::string &msg)
+{
+    // notify type
+    ::msgpack::rpc::msg_notify<std::string, std::string> notify(
+            // method
+            "error_notify",
+            // params
+            msg
+            );
+    // result
+    auto sbuf=std::make_shared<msgpack::sbuffer>();
+    msgpack::pack(*sbuf, notify);
+    return sbuf;
+}
+
+
 class session: public std::enable_shared_from_this<session>
 {
     boost::asio::ip::tcp::socket m_socket;
@@ -44,21 +60,6 @@ public:
                         shared->start_read();
                     }
                 }); 
-    }
-
-    static std::shared_ptr<msgpack::sbuffer> error_notify(const std::string &msg)
-    {
-        // notify type
-        ::msgpack::rpc::msg_notify<std::string, std::string> notify(
-                // method
-                "error_notify",
-                // params
-                msg
-                );
-        // result
-        auto sbuf=std::make_shared<msgpack::sbuffer>();
-        msgpack::pack(*sbuf, notify);
-        return sbuf;
     }
 
     void start_read()
