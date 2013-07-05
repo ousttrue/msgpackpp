@@ -437,6 +437,31 @@ public:
         void add_property(const std::string &property,
                 std::function<T*()> thisGetter,
                 V(T::*getMethod)()const,
+                void(T::*setMethod)(V)
+                )
+        {
+            add_handler(std::string("get_")+property, [thisGetter, getMethod](
+                        )->V{
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    return (self->*getMethod)();
+                    });
+            add_handler(std::string("set_")+property, [thisGetter, setMethod](
+                        const V& value){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    (self->*setMethod)(value);
+                    });
+        }
+    // utility(const &)
+    template<typename T, typename V>
+        void add_property(const std::string &property,
+                std::function<T*()> thisGetter,
+                V(T::*getMethod)()const,
                 void(T::*setMethod)(const V&)
                 )
         {
@@ -457,6 +482,7 @@ public:
                     (self->*setMethod)(value);
                     });
         }
+
 
     // ToDo
     // removeMethod
