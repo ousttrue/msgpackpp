@@ -460,14 +460,15 @@ public:
 
     // ToDo
     // removeMethod
-    // movefromtoMethod
     template<typename T, typename V>
         void add_list_property(const std::string &property,
                 std::function<T*()> thisGetter,
                 void(T::*clearMethod)(),
                 void(T::*addMethod)(const V&),
-                void(T::*updateMethod)(const V&),
+                //void(T::*updateMethod)(const V&),
+                void(T::*updateAtMethod)(size_t, const V&),
                 void(T::*removeAtMethod)(size_t),
+                void(T::*movefromtoMethod)(size_t, size_t),
                 std::list<V>(T::*listMethod)()const              
                 )
         {
@@ -491,6 +492,7 @@ public:
                     (self->*addMethod)(item);
                     });
             }
+            /*
             if(updateMethod){
             add_handler(std::string("updateitem_")+property, [thisGetter, updateMethod](
                         const V &item){
@@ -501,6 +503,17 @@ public:
                     (self->*updateMethod)(item);
                     });
             }
+            */
+            if(updateAtMethod){
+            add_handler(std::string("updateitemat_")+property, [thisGetter, updateAtMethod](
+                        size_t index, const V &item){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    (self->*updateAtMethod)(index, item);
+                    });
+            }
             if(removeAtMethod){
             add_handler(std::string("removeat_")+property, [thisGetter, removeAtMethod](
                         size_t index){
@@ -509,6 +522,16 @@ public:
                     throw msgerror("fail to convert params", error_self_pointer_is_null);
                     }
                     (self->*removeAtMethod)(index);
+                    });
+            }
+            if(movefromtoMethod){
+            add_handler(std::string("movefromto_")+property, [thisGetter, movefromtoMethod](
+                        size_t from, size_t to){
+                    auto self=thisGetter();
+                    if(!self){
+                    throw msgerror("fail to convert params", error_self_pointer_is_null);
+                    }
+                    (self->*movefromtoMethod)(from, to);
                     });
             }
             if(listMethod){
