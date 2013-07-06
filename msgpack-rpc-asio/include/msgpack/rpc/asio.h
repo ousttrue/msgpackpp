@@ -1,6 +1,11 @@
 #pragma once
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable:4819)
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+#pragma warning(pop)
+#endif
 #include <memory>
 #include <functional>
 #include <msgpack/rpc/protocol.h>
