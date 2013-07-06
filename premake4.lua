@@ -20,13 +20,26 @@ end
 
 configuration "gmake"
 do
-    defines {
-        --"BOOST_TEST_DYN_LINK",
-    }
     buildoptions {
         "-std=c++0x",
         --"-Wno-deprecated",
     }
+end
+
+configuration {"gmake", "linux" }
+do
+    defines {
+        "BOOST_TEST_DYN_LINK",
+    }
+    links {
+        "boost_thread-mt",
+        "boost_system-mt",
+        "boost_unit_test_framework-mt",
+    }
+end
+
+configuration { "gmake", "windows", "debug" }
+do
     links {
         "boost_thread-mgw47-mt-d-1_54",
         "boost_system-mgw47-mt-d-1_54",
@@ -36,17 +49,15 @@ do
     }
 end
 
-configuration "gmake Linux"
+configuration { "gmake", "windows", "release" }
 do
     links {
-        "boost_thread-mt",
-        "boost_system-mt",
-        "boost_unit_test_framework-mt",
+        "boost_thread-mgw47-mt-1_54",
+        "boost_system-mgw47-mt-1_54",
+        "boost_unit_test_framework-mgw47-mt-1_54",
+        "ws2_32",
+        "Mswsock",
     }
-end
-
-configuration "gmake Windows"
-do
 end
 
 configuration "Windows"
