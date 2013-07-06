@@ -84,8 +84,8 @@ end
 
 configuration {}
 
-include "sample"
 include "test"
+include "sample"
 include "msgpack-rpc-asio"
 include "msgpack"
 

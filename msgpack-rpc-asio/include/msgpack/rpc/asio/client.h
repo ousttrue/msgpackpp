@@ -1,4 +1,6 @@
 #pragma once
+#include "connection_status.h"
+
 
 namespace msgpack {
 namespace rpc {
@@ -207,19 +209,23 @@ class client
     std::shared_ptr<session> m_session;
     std::map<msgpack::rpc::msgid_t, std::shared_ptr<func_call>> m_request_map;
 
+    connection_callback_t m_connection_callback;
+
 public:
-    client(boost::asio::io_service &io_service)
-		: m_io_service(io_service)
+    client(boost::asio::io_service &io_service, 
+            connection_callback_t connection_callback=connection_callback_t())
+        : m_io_service(io_service), m_connection_callback(connection_callback)
     {
 	}
 
     void connect_async(const boost::asio::ip::tcp::endpoint &endpoint)
     {
 		auto c=this;
-		m_session=session::create(m_io_service, [c](const object &msg, std::shared_ptr<session> session)
+		auto on_read=[c](const object &msg, std::shared_ptr<session> session)
 		{
 			c->receive(msg, session);
-		});
+		};
+		m_session=session::create(m_io_service, on_read, m_connection_callback);
         m_session->connect_async(endpoint);
     }
 
