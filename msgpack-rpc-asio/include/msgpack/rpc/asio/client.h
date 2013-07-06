@@ -150,6 +150,16 @@ public:
         return *this;
     }
 
+    const ::msgpack::object &get_result()const
+    {
+        if(m_status==STATUS_RECEIVED){
+            return m_result;
+        }
+        else{
+            throw func_call_error("not ready");
+        }
+    }
+
     template<typename R>
         R& convert(R *value)const
         {

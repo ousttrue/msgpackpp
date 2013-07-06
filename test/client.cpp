@@ -31,7 +31,13 @@ BOOST_AUTO_TEST_CASE( client )
     auto request2=client.call_async("add", 3, 4);
     request2->sync();
     int result2;
+    /*
     BOOST_CHECK_EQUAL(request2->convert(&result2), 7);
+    */
+    // raw extract
+    const msgpack::object &obj=request2->get_result();
+    obj.convert(&result2);
+    BOOST_CHECK_EQUAL(result2, 7);
 
     client_io.stop();
     client_thread.join();
