@@ -21,12 +21,23 @@ end
 configuration "gmake"
 do
     defines {
-        "BOOST_TEST_DYN_LINK",
+        --"BOOST_TEST_DYN_LINK",
     }
     buildoptions {
         "-std=c++0x",
         --"-Wno-deprecated",
     }
+    links {
+        "boost_thread-mgw47-mt-d-1_54",
+        "boost_system-mgw47-mt-d-1_54",
+        "boost_unit_test_framework-mgw47-mt-d-1_54",
+        "ws2_32",
+        "Mswsock",
+    }
+end
+
+configuration "gmake Linux"
+do
     links {
         "boost_thread-mt",
         "boost_system-mt",
@@ -34,7 +45,11 @@ do
     }
 end
 
-configuration "vs*"
+configuration "gmake Windows"
+do
+end
+
+configuration "Windows"
 do
     includedirs {
         "$(BOOST_DIR)",
@@ -42,20 +57,24 @@ do
     defines {
         "_WIN32_WINNT=0x0500",
     }
-    buildoptions {
-        "/TP",
-        "/wd4800",
-    }
     libdirs {
         "$(BOOST_DIR)/lib",
         "$(BOOST_DIR)/stage/lib",
     }
 end
 
+configuration "vs*"
+do
+    buildoptions {
+        "/TP",
+        "/wd4800",
+    }
+end
+
 configuration {}
 
-include "test"
 include "sample"
+include "test"
 include "msgpack-rpc-asio"
 include "msgpack"
 

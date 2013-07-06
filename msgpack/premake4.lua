@@ -23,6 +23,7 @@ prebuildcommands {
 
 -- compile
 includedirs {
+    "src",
 }
 defines {
 }

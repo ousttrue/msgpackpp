@@ -37,11 +37,3 @@ links {
 linkoptions {
 }
 
-configuration "gmake"
-do
-    links {
-        "boost_thread-mt",
-        "boost_system-mt",
-    }
-end
-
