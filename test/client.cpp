@@ -13,6 +13,9 @@ BOOST_AUTO_TEST_CASE( client )
 
     // client
     boost::asio::io_service client_io;
+	// avoid stop client_io when client closed
+	boost::asio::io_service::work work(client_io);
+
 	msgpack::rpc::asio::client client(client_io, [](
                 msgpack::rpc::asio::connection_status status){
 
@@ -39,6 +42,20 @@ BOOST_AUTO_TEST_CASE( client )
     obj.convert(&result2);
     BOOST_CHECK_EQUAL(result2, 7);
 
+    // close
+    client.close();
+    // no active socket.
+
+    // reconnect
+    client.connect_async(boost::asio::ip::tcp::endpoint(
+                boost::asio::ip::address::from_string("127.0.0.1"), PORT));
+
+    auto request3=client.call_async("add", 5, 6);
+    request3->sync();
+    int result3;
+    BOOST_CHECK_EQUAL(request3->convert(&result3), 11);
+
+    // close
     client_io.stop();
     client_thread.join();
 }
