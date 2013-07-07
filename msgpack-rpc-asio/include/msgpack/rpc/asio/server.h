@@ -9,9 +9,12 @@ class server
 {
     boost::asio::io_service &m_io_service;
     boost::asio::ip::tcp::acceptor m_acceptor;
-    std::list<std::weak_ptr<session>> m_sessions;
-    typedef std::function<void(const object &msg, std::shared_ptr<session> session)> on_receive_t;
+    //std::list<std::weak_ptr<session>> m_sessions;
+    typedef std::function<
+        void(const object &msg, std::shared_ptr<session> session)> on_receive_t;
     on_receive_t m_on_receive;
+
+    error_handler_t m_error_handler;
 public:
     server(boost::asio::io_service &io_service)
 		: m_io_service(io_service), m_acceptor(io_service)
@@ -23,20 +26,26 @@ public:
     {
     }
 
+    server(boost::asio::io_service &io_service, 
+            on_receive_t on_receive, error_handler_t error_handler)
+        : m_io_service(io_service), m_acceptor(io_service), 
+        m_on_receive(on_receive), m_error_handler(error_handler)
+    {
+    }
+
     ~server()
     {
-        for(auto it=m_sessions.begin(); it!=m_sessions.end(); ++it){
-            auto session=it->lock();
-            if(session){
-                session->socket().close();
-            }
-        }
     }
 
 	void set_on_receive(on_receive_t on_receive)
 	{
 		m_on_receive=on_receive;
 	}
+
+    void set_error_handler(error_handler_t error_handler)
+    {
+        m_error_handler=error_handler;
+    }
 
     void listen(boost::asio::ip::tcp::endpoint endpoint)
     {
@@ -54,21 +63,31 @@ public:
 private:
     void start_accept()
     {
-        auto new_connection = session::create(m_io_service, m_on_receive);
-        m_sessions.push_back(new_connection);
+        auto new_connection = session::create(m_io_service, m_on_receive, 
+                connection_callback_t(),
+                m_error_handler);
+        auto socket=std::make_shared<boost::asio::ip::tcp::socket>(m_io_service);
+
+        //m_sessions.push_back(new_connection);
 
         auto self=this;
-        m_acceptor.async_accept(new_connection->socket(),
-                [self, new_connection](const boost::system::error_code& error){
-                if (error){
-                    throw error;
+        auto on_accept=[self, new_connection, socket/*keep socket*/](
+                const boost::system::error_code& error){
+            if (error){
+                if(self->m_error_handler){
+                    self->m_error_handler(error);
                 }
                 else{
-                    new_connection->start_read();
-                    // next
-                    self->start_accept();
+                    throw error;
                 }
-                });
+            }
+            else{
+                new_connection->accept(socket);
+                // next
+                self->start_accept();
+            }
+        };
+        m_acceptor.async_accept(*socket.get(), on_accept);
     }
 };
 

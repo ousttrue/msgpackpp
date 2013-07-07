@@ -1,5 +1,4 @@
 #pragma once
-#include "connection_status.h"
 
 
 namespace msgpack {
@@ -220,11 +219,15 @@ class client
     std::map<msgpack::rpc::msgid_t, std::shared_ptr<func_call>> m_request_map;
 
     connection_callback_t m_connection_callback;
+    error_handler_t m_error_handler;
 
 public:
     client(boost::asio::io_service &io_service, 
-            connection_callback_t connection_callback=connection_callback_t())
-        : m_io_service(io_service), m_connection_callback(connection_callback)
+            connection_callback_t connection_callback=connection_callback_t(),
+            error_handler_t error_handler=error_handler_t())
+        : m_io_service(io_service), 
+        m_connection_callback(connection_callback),
+        m_error_handler(error_handler)
     {
 	}
 
@@ -237,6 +240,16 @@ public:
 		};
 		m_session=session::create(m_io_service, on_read, m_connection_callback);
         m_session->connect_async(endpoint);
+    }
+
+    void close()
+    {
+        m_session->close();
+    }
+
+    bool is_connect()
+    {
+        return m_session->get_connection_status()==connection_connected;
     }
 
     // 0

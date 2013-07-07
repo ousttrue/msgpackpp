@@ -11,6 +11,7 @@ struct Fixture
     boost::asio::io_service server_io;
     msgpack::rpc::asio::server server;
     std::shared_ptr<boost::thread> server_thread;
+    boost::mutex m_mutex;
 
     Fixture(int port) 
         : server(server_io), work(dispatcher_io)
@@ -23,14 +24,29 @@ struct Fixture
 
 		auto pDispatcher=&dispatcher;
 		auto pDispatcherIO=&dispatcher_io;
-		server.set_on_receive([pDispatcher, pDispatcherIO](
-                const msgpack::object &msg, std::shared_ptr<msgpack::rpc::asio::session> session)
-            {
-                auto self=pDispatcher;
-                pDispatcherIO->post([self, msg, session](){
+        auto on_receive=[pDispatcher, pDispatcherIO](
+                const msgpack::object &msg, 
+                std::shared_ptr<msgpack::rpc::asio::session> session)
+        {
+            auto self=pDispatcher;
+            pDispatcherIO->post([self, msg, session](){
                     self->dispatch(msg, session);
-                });
-            });
+                    });
+        };
+		server.set_on_receive(on_receive);
+
+		auto &mutex=m_mutex;
+        auto error_handler=[&mutex](boost::system::error_code error)
+        {
+			if(error==boost::asio::error::connection_reset){
+				// closed
+				return;
+			}
+            boost::mutex::scoped_lock lock(mutex);
+			auto msg=error.message();
+            std::cerr << msg << std::endl;
+        };
+        server.set_error_handler(error_handler);
 
         server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
         server_thread=std::make_shared<boost::thread>([&]{ server_io.run(); });
@@ -43,6 +59,8 @@ struct Fixture
         server_io.stop();
         server_thread->join();
     }   
+
+    boost::mutex &mutex(){ return m_mutex; }
 
     static int zero()
     {

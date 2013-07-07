@@ -27,6 +27,18 @@ enum error_code
     error_not_implemented,
     error_self_pointer_is_null,
 };
+typedef std::function<void(boost::system::error_code error)> error_handler_t;
+
+
+enum connection_status 
+{
+    connection_none,
+    connection_connecting,
+    connection_connected,
+    connection_error,
+};
+typedef std::function<void(connection_status)> connection_callback_t;
+
 
 class msgerror: std::runtime_error
 {
