@@ -69,9 +69,15 @@ int main(int argc, char **argv)
     client.connect_async(boost::asio::ip::tcp::endpoint(
                 boost::asio::ip::address::from_string("127.0.0.1"), PORT));
 
-    // sync request
-	int result2;
-    std::cout << "add, 1, 2 = " << client.call_sync(&result2, "add", 3, 4) << std::endl;
+    // request callback
+	auto on_result=[](msgpack::rpc::asio::func_call* result){
+		int result2;
+		std::cout << "add, 3, 4 = " << result->convert(&result2) << std::endl;
+	};
+    auto result2=client.call_async(on_result, "add", 3, 4);
+
+	// block
+	result2->sync();
 
     // stop asio
     client_io.stop();

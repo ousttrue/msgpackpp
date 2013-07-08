@@ -98,9 +98,11 @@ private:
     std::string m_request;
     boost::mutex m_mutex;
     boost::condition_variable_any m_cond;
+
+    std::function<void(func_call*)> m_callback;
 public:
-    func_call(const std::string &s)
-        : m_status(STATUS_WAIT), m_request(s), m_error_code(success)
+    func_call(const std::string &s, std::function<void(func_call*)> callback)
+        : m_status(STATUS_WAIT), m_request(s), m_error_code(success), m_callback(callback)
         {
         }
 
@@ -112,7 +114,7 @@ public:
         boost::mutex::scoped_lock lock(m_mutex);
         m_result=result;
         m_status=STATUS_RECEIVED;
-        m_cond.notify_all();
+        notify();
     }
 
     void set_error(const ::msgpack::object &error)
@@ -127,7 +129,7 @@ public:
         m_status=STATUS_ERROR;
         m_error_code=static_cast<error_code>(std::get<0>(codeWithMsg));
         m_error_msg=std::get<1>(codeWithMsg);
-        m_cond.notify_all();
+        notify();
     }
 
     bool is_error()const{ return m_status==STATUS_ERROR; }
@@ -193,7 +195,17 @@ public:
 
         return ss.str();
     }
+
+private:
+    void notify()
+    {
+        if(m_callback){
+            m_callback(this);
+        }
+        m_cond.notify_all();
+    }
 };
+typedef std::function<void(func_call*)> func_call_callback_t;
 inline std::ostream &operator<<(std::ostream &os, const func_call &request)
 {
     os << request.string();
@@ -251,6 +263,41 @@ public:
     {
         return m_session->get_connection_status()==connection_connected;
     }
+
+    // 0
+    std::shared_ptr<func_call> call_async(func_call_callback_t callback, const std::string &method)
+    {
+        auto request=m_request_factory.create(method);
+        return send_async(request, callback);
+    }
+    // 1
+    template<typename A1>
+        std::shared_ptr<func_call> call_async(func_call_callback_t callback, const std::string &method, A1 a1)
+        {
+            auto request=m_request_factory.create(method, a1);
+            return send_async(request, callback);
+        }
+    // 2
+    template<typename A1, typename A2>
+        std::shared_ptr<func_call> call_async(func_call_callback_t callback, const std::string &method, A1 a1, A2 a2)
+        {
+            auto request=m_request_factory.create(method, a1, a2);
+            return send_async(request, callback);
+        }
+    // 3
+    template<typename A1, typename A2, typename A3>
+        std::shared_ptr<func_call> call_async(func_call_callback_t callback, const std::string &method, A1 a1, A2 a2, A3 a3)
+        {
+            auto request=m_request_factory.create(method, a1, a2, a3);
+            return send_async(request, callback);
+        }
+    // 4
+    template<typename A1, typename A2, typename A3, typename A4>
+        std::shared_ptr<func_call> call_async(func_call_callback_t callback, const std::string &method, A1 a1, A2 a2, A3 a3, A4 a4)
+        {
+            auto request=m_request_factory.create(method, a1, a2, a3, a4);
+            return send_async(request, callback);
+        }
 
     // 0
     std::shared_ptr<func_call> call_async(const std::string &method)
@@ -346,14 +393,16 @@ public:
 
 private: 
     template<typename Parameter>
-        std::shared_ptr<func_call> send_async(const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq)
+        std::shared_ptr<func_call> send_async(
+                const ::msgpack::rpc::msg_request<std::string, Parameter> &msgreq,
+                func_call_callback_t callback=func_call_callback_t())
         {
             auto sbuf=std::make_shared<msgpack::sbuffer>();
             ::msgpack::pack(*sbuf, msgreq);
 
             std::stringstream ss;
             ss << msgreq.method << msgreq.param;
-            auto req=std::make_shared<func_call>(ss.str());
+            auto req=std::make_shared<func_call>(ss.str(), callback);
             m_request_map.insert(std::make_pair(msgreq.msgid, req));
 
             m_session->write_async(sbuf);
