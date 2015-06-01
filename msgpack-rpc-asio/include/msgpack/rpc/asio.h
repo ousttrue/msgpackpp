@@ -2,8 +2,10 @@
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4819)
+#endif
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+#ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 #include <memory>
