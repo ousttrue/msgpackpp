@@ -1,5 +1,6 @@
 #include <msgpack/rpc/asio.h>
-#include <boost/thread.hpp>
+#include <thread>
+#include <iostream>
 
 
 class SomeClass
@@ -27,22 +28,22 @@ int main(int argc, char **argv)
             );
 
     // server
-    boost::asio::io_service server_io;
+    ::asio::io_service server_io;
     msgpack::rpc::asio::server server(server_io, [&dispatcher](
                 const msgpack::object &msg, 
                 std::shared_ptr<msgpack::rpc::asio::session> session)
             {
                 dispatcher.dispatch(msg, session);
             });
-    server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
-    boost::thread server_thread([&server_io](){ server_io.run(); });
+    server.listen(::asio::ip::tcp::endpoint(::asio::ip::tcp::v4(), PORT));
+    std::thread server_thread([&server_io](){ server_io.run(); });
 
     // client
-    boost::asio::io_service client_io;
+    ::asio::io_service client_io;
     msgpack::rpc::asio::client client(client_io); 
-    client.connect_async(boost::asio::ip::tcp::endpoint(
-                    boost::asio::ip::address::from_string("127.0.0.1"), PORT));
-    boost::thread clinet_thread([&client_io](){ client_io.run(); });
+    client.connect_async(::asio::ip::tcp::endpoint(
+                    ::asio::ip::address::from_string("127.0.0.1"), PORT));
+    std::thread clinet_thread([&client_io](){ client_io.run(); });
 
     // sync request
 	int result1;

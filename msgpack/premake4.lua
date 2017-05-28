@@ -9,9 +9,6 @@ kind "StaticLib"
 --kind "ConsoleApp"
 --kind "WindowedApp"
 
-flags {
-    "Unicode",
-}
 files {
     "src/**.cpp", 
     "src/**.hpp",
@@ -37,4 +34,11 @@ links {
 }
 linkoptions {
 }
+
+configuration "vs*"
+do
+    buildoptions {
+        "/TP",
+    }
+end
 

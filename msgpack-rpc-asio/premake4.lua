@@ -9,9 +9,6 @@ kind "StaticLib"
 --kind "ConsoleApp"
 --kind "WindowedApp"
 
-flags {
-    "Unicode",
-}
 files {
     "include/**.h",
 }

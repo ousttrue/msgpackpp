@@ -1,8 +1,5 @@
 #pragma once
-#pragma warning(push)
-#pragma warning(disable: 4819)        //warning about encoding of charactor in source code.
-#include <boost/type_traits.hpp>
-#pragma warning(pop)
+#include <type_traits>
 
 
 #ifdef __GNUC__
@@ -104,7 +101,7 @@ class dispatcher
         std::shared_ptr<msgpack::sbuffer>(msgpack::rpc::msgid_t, msgpack::object)
         > func;
     std::map<std::string, func> m_handlerMap;
-    std::shared_ptr<boost::thread> m_thread;
+    std::shared_ptr<std::thread> m_thread;
 
 public:
     dispatcher()
@@ -170,7 +167,7 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
                         return helper<F, R, C, std::tuple<B1>>(
                             handler, msgid, msg_params);
                         }));
@@ -185,8 +182,8 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
 			{
-				typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
-				typedef TYPENAME boost::remove_const<typename boost::remove_reference<A2>::type>::type B2;
+				typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
+				typedef TYPENAME std::remove_const<typename std::remove_reference<A2>::type>::type B2;
 				return helper<F, R, C, std::tuple<B1, B2>>(
 					handler, msgid, msg_params);
 
@@ -202,9 +199,9 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A2>::type>::type B2;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A3>::type>::type B3;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A2>::type>::type B2;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A3>::type>::type B3;
                         return helper<F, R, C, std::tuple<B1, B2, B3>>(
                             handler, msgid, msg_params);
 
@@ -220,10 +217,10 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A2>::type>::type B2;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A3>::type>::type B3;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A4>::type>::type B4;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A2>::type>::type B2;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A3>::type>::type B3;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A4>::type>::type B4;
                         return helper<F, R, C, std::tuple<B1, B2, B3, B4>>(
                             handler, msgid, msg_params);
 
@@ -255,7 +252,7 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
                         return helper<F, C, std::tuple<B1>>(
                             handler, msgid, msg_params);
 
@@ -271,8 +268,8 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A2>::type>::type B2;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A2>::type>::type B2;
                         return helper<F, C, std::tuple<B1, B2>>(
                             handler, msgid, msg_params);
 
@@ -288,9 +285,9 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A2>::type>::type B2;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A3>::type>::type B3;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A2>::type>::type B2;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A3>::type>::type B3;
                         return helper<F, C, std::tuple<B1, B2, B3>>(
                             handler, msgid, msg_params);
 
@@ -306,10 +303,10 @@ public:
                             ::msgpack::rpc::msgid_t msgid, 
                             ::msgpack::object msg_params)->std::shared_ptr<msgpack::sbuffer>
                         {
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A1>::type>::type B1;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A2>::type>::type B2;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A3>::type>::type B3;
-                        typedef TYPENAME boost::remove_const<typename boost::remove_reference<A4>::type>::type B4;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A1>::type>::type B1;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A2>::type>::type B2;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A3>::type>::type B3;
+                        typedef TYPENAME std::remove_const<typename std::remove_reference<A4>::type>::type B4;
                         return helper<F, C, std::tuple<B1, B2, B3, B4>>(
                             handler, msgid, msg_params);
 

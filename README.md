@@ -1,18 +1,10 @@
 msgpack-rpc-asio
 ================
-msgpack-rpc
+msgpack-rpc for windows.
 
-<https://github.com/msgpack/msgpack-rpc>
-
-のバックエンドをboost::asioに置き換えてWindowsで使えるようにする試み
-
-ToDo
-----
-* 5引数関数
-* 6引数関数
-* 7引数関数
-* 8引数関数
-* 9引数関数
+# Updates
+* 20170528: remove boost dependencies. use [asio standalone](https://github.com/chriskohlhoff/asio), [Catch](https://github.com/philsquared/Catch)
+* 20170528: fix vs2017 build.
 
 Files
 -----
@@ -56,7 +48,7 @@ Sample
 ------
 ```c++
 #include <msgpack/rpc/asio.h>
-#include <boost/thread.hpp>
+#include <thread>
 
 
 class SomeClass
@@ -92,14 +84,14 @@ int main(int argc, char **argv)
                 dispatcher.dispatch(msg, session);
             });
     server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
-    boost::thread server_thread([&server_io](){ server_io.run(); });
+    std::thread server_thread([&server_io](){ server_io.run(); });
 
     // client
     boost::asio::io_service client_io;
     msgpack::rpc::asio::client client(client_io); 
     client.connect_async(boost::asio::ip::tcp::endpoint(
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT));
-    boost::thread clinet_thread([&client_io](){ client_io.run(); });
+    std::thread clinet_thread([&client_io](){ client_io.run(); });
 
     // sync request
 	int result1;

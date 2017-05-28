@@ -96,8 +96,8 @@ private:
     std::string m_error_msg;
     ::msgpack::object m_result;
     std::string m_request;
-    boost::mutex m_mutex;
-    boost::condition_variable_any m_cond;
+    std::mutex m_mutex;
+    std::condition_variable_any m_cond;
 
     std::function<void(func_call*)> m_callback;
 public:
@@ -111,7 +111,7 @@ public:
         if(m_status!=STATUS_WAIT){
             throw func_call_error("already finishded");
         }
-        boost::mutex::scoped_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         m_result=result;
         m_status=STATUS_RECEIVED;
         notify();
@@ -122,7 +122,7 @@ public:
         if(m_status!=STATUS_WAIT){
             throw func_call_error("already finishded");
         }
-        boost::mutex::scoped_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         typedef std::tuple<int, std::string> CodeWithMsg;
         CodeWithMsg codeWithMsg;
         error.convert(&codeWithMsg);
@@ -144,7 +144,7 @@ public:
     // blocking
     func_call& sync()
     {
-        boost::mutex::scoped_lock lock(m_mutex);
+        std::lock_guard<std::mutex> lock(m_mutex);
         if(m_status==STATUS_WAIT){
             m_cond.wait(m_mutex);
         }
@@ -224,7 +224,7 @@ public:
 
 class client
 {
-	boost::asio::io_service &m_io_service;
+	::asio::io_service &m_io_service;
     request_factory m_request_factory;
 
     std::shared_ptr<session> m_session;
@@ -234,7 +234,7 @@ class client
     error_handler_t m_error_handler;
 
 public:
-    client(boost::asio::io_service &io_service, 
+    client(::asio::io_service &io_service, 
             connection_callback_t connection_callback=connection_callback_t(),
             error_handler_t error_handler=error_handler_t())
         : m_io_service(io_service), 
@@ -243,7 +243,7 @@ public:
     {
 	}
 
-    void connect_async(const boost::asio::ip::tcp::endpoint &endpoint)
+    void connect_async(const ::asio::ip::tcp::endpoint &endpoint)
     {
 		auto c=this;
 		auto on_read=[c](const object &msg, std::shared_ptr<session> session)

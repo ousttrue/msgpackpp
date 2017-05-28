@@ -3,8 +3,8 @@
 #pragma warning(push)
 #pragma warning(disable:4819)
 #endif
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
+#include <asio.hpp>
+#include <thread>
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -29,7 +29,7 @@ enum error_code
     error_not_implemented,
     error_self_pointer_is_null,
 };
-typedef std::function<void(boost::system::error_code error)> error_handler_t;
+typedef std::function<void(::asio::error_code error)> error_handler_t;
 
 
 enum connection_status 

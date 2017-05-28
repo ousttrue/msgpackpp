@@ -1,5 +1,5 @@
 #pragma once
-
+#include <asio.hpp>
 
 namespace msgpack {
 namespace rpc {
@@ -24,8 +24,8 @@ inline std::shared_ptr<msgpack::sbuffer> error_notify(const std::string &msg)
 
 class session: public std::enable_shared_from_this<session>
 {
-    boost::asio::io_service &m_io_service;
-    std::shared_ptr<boost::asio::ip::tcp::socket> m_socket;
+    ::asio::io_service &m_io_service;
+    std::shared_ptr<::asio::ip::tcp::socket> m_socket;
     unpacker m_pac;
     // on_read
     typedef std::function<void(const object &, std::shared_ptr<session>)> on_read_t;
@@ -37,7 +37,7 @@ class session: public std::enable_shared_from_this<session>
     error_handler_t m_error_handler;
 
     // must shard_ptr
-    session(boost::asio::io_service& io_service, 
+    session(::asio::io_service& io_service, 
             on_read_t on_read,
             connection_callback_t connection_callback,
             error_handler_t error_handler
@@ -55,7 +55,7 @@ public:
     {
     }
 
-    static std::shared_ptr<session> create(boost::asio::io_service &io_service, 
+    static std::shared_ptr<session> create(::asio::io_service &io_service, 
             on_read_t func=on_read_t(),
             connection_callback_t connection_callback=connection_callback_t(),
             error_handler_t error_handler=error_handler_t())
@@ -66,12 +66,12 @@ public:
 
     connection_status get_connection_status()const{ return m_connection_status; }
 
-    void connect_async(const boost::asio::ip::tcp::endpoint &endpoint)
+    void connect_async(const ::asio::ip::tcp::endpoint &endpoint)
     {
         auto shared=shared_from_this();
-        auto socket=std::make_shared<boost::asio::ip::tcp::socket>(m_io_service);
+        auto socket=std::make_shared<::asio::ip::tcp::socket>(m_io_service);
         auto on_connect=[shared, socket/*keep socket*/](
-                const boost::system::error_code &error){
+                const ::asio::error_code &error){
             if(error){
                 if(shared->m_error_handler){
                     shared->m_error_handler(error);
@@ -93,7 +93,7 @@ public:
         set_connection_status(connection_none);
     }
 
-    void accept(std::shared_ptr<boost::asio::ip::tcp::socket> socket)
+    void accept(std::shared_ptr<::asio::ip::tcp::socket> socket)
     {
         m_socket=socket;
         set_connection_status(connection_connected);
@@ -111,10 +111,10 @@ public:
         auto shared=shared_from_this();
         auto socket=m_socket;
         auto on_read=[shared, pac, socket/*keep socket*/](
-                const boost::system::error_code &error,
+                const ::asio::error_code &error,
                 size_t bytes_transferred)
         {
-            if (error && (error != boost::asio::error::eof)) {
+            if (error && (error != ::asio::error::eof)) {
                 if(shared->m_error_handler){
                     shared->m_error_handler(error);
                 }
@@ -163,7 +163,7 @@ public:
             }
         };
         m_socket->async_read_some(
-                boost::asio::buffer(pac->buffer(), pac->buffer_capacity()),
+                ::asio::buffer(pac->buffer(), pac->buffer_capacity()),
                 on_read
                 );
     }
@@ -177,7 +177,7 @@ public:
         auto shared=shared_from_this();
         auto socket=m_socket;
         auto on_write=[shared, msg, socket/*keep socket*/](
-                const boost::system::error_code& error, 
+                const ::asio::error_code& error, 
                 size_t bytes_transferred)
         {
             if(error){
@@ -188,7 +188,7 @@ public:
             }
         };
         socket->async_write_some(
-                boost::asio::buffer(msg->data(), msg->size()), on_write
+                ::asio::buffer(msg->data(), msg->size()), on_write
                 );
     }
 
@@ -201,8 +201,8 @@ private:
        if(status==connection_none
                || status==connection_error){
            if(m_socket){
-               boost::system::error_code ec;
-               m_socket->shutdown(boost::asio::socket_base::shutdown_both, ec);
+               ::asio::error_code ec;
+               m_socket->shutdown(::asio::socket_base::shutdown_both, ec);
                if(!ec){
                    m_socket->close(ec);
                }

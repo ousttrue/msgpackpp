@@ -1,80 +1,79 @@
-#include <boost/test/unit_test.hpp> 
-
+#include <catch.hpp> 
 #include <msgpack/rpc/asio.h>
-#include <boost/thread.hpp>
+#include <thread>
 
-BOOST_AUTO_TEST_CASE( request0 )
+
+TEST_CASE( "request0" )
 {
     msgpack::rpc::asio::request_factory factory;
 
     {
         auto request=factory.create("count");
-        BOOST_CHECK_EQUAL(request.msgid, 1);
-        BOOST_CHECK_EQUAL(request.method, "count");
+        REQUIRE(request.msgid== 1);
+        REQUIRE(request.method== "count");
     }
 }
 
-BOOST_AUTO_TEST_CASE( request1 )
+TEST_CASE( "request1" )
 {
     msgpack::rpc::asio::request_factory factory;
 
     {
         auto request=factory.create("sin", 3.14);
-        BOOST_CHECK_EQUAL(request.msgid, 1);
-        BOOST_CHECK_EQUAL(request.method, "sin");
-        BOOST_CHECK_EQUAL(std::get<0>(request.param), 3.14);
+        REQUIRE(request.msgid== 1);
+        REQUIRE(request.method== "sin");
+        REQUIRE(std::get<0>(request.param)== 3.14);
     }
 }
 
-BOOST_AUTO_TEST_CASE( request2 )
+TEST_CASE( "request2" )
 {
     msgpack::rpc::asio::request_factory factory;
 
 
     {
         auto request=factory.create("add", 1, 2);
-        BOOST_CHECK_EQUAL(request.msgid, 1);
-        BOOST_CHECK_EQUAL(request.method, "add");
-        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1);
-        BOOST_CHECK_EQUAL(std::get<1>(request.param), 2);
+        REQUIRE(request.msgid== 1);
+        REQUIRE(request.method== "add");
+        REQUIRE(std::get<0>(request.param)== 1);
+        REQUIRE(std::get<1>(request.param)== 2);
     }
     {
         auto request=factory.create("mul", 1.0f, 0.5f);
-        BOOST_CHECK_EQUAL(request.msgid, 2);
-        BOOST_CHECK_EQUAL(request.method, "mul");
-        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1.0f);
-        BOOST_CHECK_EQUAL(std::get<1>(request.param), 0.5f);
+        REQUIRE(request.msgid== 2);
+        REQUIRE(request.method== "mul");
+        REQUIRE(std::get<0>(request.param)== 1.0f);
+        REQUIRE(std::get<1>(request.param)== 0.5f);
     }
 }
 
-BOOST_AUTO_TEST_CASE( request3 )
+TEST_CASE( "request3" )
 {
     msgpack::rpc::asio::request_factory factory;
 
 
     {
         auto request=factory.create("add", 1, 2, 3);
-        BOOST_CHECK_EQUAL(request.msgid, 1);
-        BOOST_CHECK_EQUAL(request.method, "add");
-        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1);
-        BOOST_CHECK_EQUAL(std::get<1>(request.param), 2);
-        BOOST_CHECK_EQUAL(std::get<2>(request.param), 3);
+        REQUIRE(request.msgid== 1);
+        REQUIRE(request.method== "add");
+        REQUIRE(std::get<0>(request.param)== 1);
+        REQUIRE(std::get<1>(request.param)== 2);
+        REQUIRE(std::get<2>(request.param)== 3);
     }
 }
 
-BOOST_AUTO_TEST_CASE( request4 )
+TEST_CASE( "request4" )
 {
     msgpack::rpc::asio::request_factory factory;
 
 
     {
         auto request=factory.create("add", 1, 2, 3, 4);
-        BOOST_CHECK_EQUAL(request.msgid, 1);
-        BOOST_CHECK_EQUAL(request.method, "add");
-        BOOST_CHECK_EQUAL(std::get<0>(request.param), 1);
-        BOOST_CHECK_EQUAL(std::get<1>(request.param), 2);
-        BOOST_CHECK_EQUAL(std::get<2>(request.param), 3);
-        BOOST_CHECK_EQUAL(std::get<3>(request.param), 4);
+        REQUIRE(request.msgid== 1);
+        REQUIRE(request.method== "add");
+        REQUIRE(std::get<0>(request.param)== 1);
+        REQUIRE(std::get<1>(request.param)== 2);
+        REQUIRE(std::get<2>(request.param)== 3);
+        REQUIRE(std::get<3>(request.param)== 4);
     }
 }
-

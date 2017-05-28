@@ -1,7 +1,7 @@
-#include <boost/test/unit_test.hpp> 
+#include <catch.hpp> 
 
 #include <msgpack/rpc/asio.h>
-#include <boost/thread.hpp>
+#include <thread>
 
 class Dummy
 {
@@ -30,9 +30,9 @@ static float zero()
     return 0;
 }
 
-BOOST_AUTO_TEST_CASE( dispatcher0 )
+TEST_CASE( "dispatcher0" )
 {
-    boost::asio::io_service io_service;
+    ::asio::io_service io_service;
     msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
@@ -51,9 +51,9 @@ static bool unary(double n)
     return false;
 }
 
-BOOST_AUTO_TEST_CASE( dispatcher1 )
+TEST_CASE( "dispatcher1" )
 {
-    boost::asio::io_service io_service;
+    ::asio::io_service io_service;
     msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
@@ -77,9 +77,9 @@ static int binary(int a, int b)
     return a+b;
 }
 
-BOOST_AUTO_TEST_CASE( dispatcher2 )
+TEST_CASE( "dispatcher2" )
 {
-    boost::asio::io_service io_service;
+    ::asio::io_service io_service;
     msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
@@ -103,9 +103,9 @@ static int func3(int a, int b, int c)
     return a+b+c;
 }
 
-BOOST_AUTO_TEST_CASE( dispatcher3 )
+TEST_CASE( "dispatcher3" )
 {
-    boost::asio::io_service io_service;
+    ::asio::io_service io_service;
     msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer
@@ -129,9 +129,9 @@ static int func4(int a, int b, int c, int d)
     return a+b+c+d;
 }
 
-BOOST_AUTO_TEST_CASE( dispatcher4 )
+TEST_CASE( "dispatcher4" )
 {
-    boost::asio::io_service io_service;
+    ::asio::io_service io_service;
     msgpack::rpc::asio::dispatcher dispatcher;
 
     // function pointer

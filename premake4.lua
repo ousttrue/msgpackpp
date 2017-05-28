@@ -7,7 +7,7 @@ configurations { "Debug", "Release" }
 configuration "Debug"
 do
 	defines { "DEBUG" }
-	flags { "Symbols", }
+	symbols "On"
 	targetdir "debug"
 end
 
@@ -16,6 +16,20 @@ do
 	defines { "NDEBUG" }
 	flags { "Optimize", }
 	targetdir "release"
+end
+
+configuration {}
+do
+    characterset "MBCS"
+
+    -- asio standalone
+    includedirs {
+        "asio/asio/include",
+        "catch",
+    }
+    defines {
+        "ASIO_STANDALONE",
+    }
 end
 
 configuration "gmake"
@@ -29,21 +43,14 @@ end
 configuration {"gmake", "linux" }
 do
     defines {
-        "BOOST_TEST_DYN_LINK",
     }
     links {
-        "boost_thread-mt",
-        "boost_system-mt",
-        "boost_unit_test_framework-mt",
     }
 end
 
 configuration { "gmake", "windows", "debug" }
 do
     links {
-        "boost_thread-mgw47-mt-d-1_54",
-        "boost_system-mgw47-mt-d-1_54",
-        "boost_unit_test_framework-mgw47-mt-d-1_54",
         "ws2_32",
         "Mswsock",
     }
@@ -52,9 +59,6 @@ end
 configuration { "gmake", "windows", "release" }
 do
     links {
-        "boost_thread-mgw47-mt-1_54",
-        "boost_system-mgw47-mt-1_54",
-        "boost_unit_test_framework-mgw47-mt-1_54",
         "ws2_32",
         "Mswsock",
     }
@@ -62,23 +66,18 @@ end
 
 configuration "Windows"
 do
-    includedirs {
-        "$(BOOST_DIR)",
-    }
     defines {
-        "_WIN32_WINNT=0x0500",
+        "_WIN32_WINNT=0x0501",
     }
     libdirs {
-        "$(BOOST_DIR)/lib",
-        "$(BOOST_DIR)/stage/lib",
     }
 end
 
 configuration "vs*"
 do
     buildoptions {
-        "/TP",
         "/wd4800",
+        "/wd4996",
     }
 end
 

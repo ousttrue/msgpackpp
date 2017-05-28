@@ -1,17 +1,19 @@
 #pragma once
+#include <iostream>
+
 
 struct Fixture 
 {
     // dispatcher
-    boost::asio::io_service dispatcher_io;
-	boost::asio::io_service::work work;
+    ::asio::io_service dispatcher_io;
+	::asio::io_service::work work;
 	msgpack::rpc::asio::dispatcher dispatcher;
-    std::shared_ptr<boost::thread> dispatcher_thread;
+    std::shared_ptr<std::thread> dispatcher_thread;
 
-    boost::asio::io_service server_io;
+    ::asio::io_service server_io;
     msgpack::rpc::asio::server server;
-    std::shared_ptr<boost::thread> server_thread;
-    boost::mutex m_mutex;
+    std::shared_ptr<std::thread> server_thread;
+    std::mutex m_mutex;
 
     Fixture(int port) 
         : server(server_io), work(dispatcher_io)
@@ -36,22 +38,22 @@ struct Fixture
 		server.set_on_receive(on_receive);
 
 		auto &mutex=m_mutex;
-        auto error_handler=[&mutex](boost::system::error_code error)
+        auto error_handler=[&mutex](asio::error_code error)
         {
-			if(error==boost::asio::error::connection_reset){
+			if(error==::asio::error::connection_reset){
 				// closed
 				return;
 			}
-            boost::mutex::scoped_lock lock(mutex);
+            std::lock_guard<std::mutex> lock(mutex);
 			auto msg=error.message();
             std::cerr << msg << std::endl;
         };
         server.set_error_handler(error_handler);
 
-        server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
-        server_thread=std::make_shared<boost::thread>([&]{ server_io.run(); });
+        server.listen(::asio::ip::tcp::endpoint(::asio::ip::tcp::v4(), port));
+        server_thread=std::make_shared<std::thread>([&]{ server_io.run(); });
 
-        dispatcher_thread=std::make_shared<boost::thread>([&]{ dispatcher_io.run(); });
+        dispatcher_thread=std::make_shared<std::thread>([&]{ dispatcher_io.run(); });
     }   
     ~Fixture() {
         dispatcher_io.stop();
@@ -60,7 +62,7 @@ struct Fixture
         server_thread->join();
     }   
 
-    boost::mutex &mutex(){ return m_mutex; }
+    std::mutex &mutex(){ return m_mutex; }
 
     static int zero()
     {

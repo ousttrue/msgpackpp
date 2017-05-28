@@ -1,5 +1,7 @@
 #include <msgpack/rpc/asio.h>
-#include <boost/thread.hpp>
+#include <asio.hpp>
+#include <thread>
+#include <iostream>
 
 
 class SomeClass
@@ -26,13 +28,13 @@ int main(int argc, char **argv)
             , &SomeClass::setNumber
             );
 
-    auto on_error=[](boost::system::error_code error)
+    msgpack::rpc::asio::error_handler_t on_error=[](::asio::error_code error)
     {
         std::cerr << error.message() << std::endl;
     };
 
     // server
-    boost::asio::io_service server_io;
+    asio::io_service server_io;
     auto on_receive=[&dispatcher](
             const msgpack::object &msg, 
             std::shared_ptr<msgpack::rpc::asio::session> session)
@@ -40,23 +42,23 @@ int main(int argc, char **argv)
         dispatcher.dispatch(msg, session);
     };
     msgpack::rpc::asio::server server(server_io, on_receive, on_error);
-    server.listen(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
-    boost::thread server_thread([&server_io](){ server_io.run(); });
+    server.listen(::asio::ip::tcp::endpoint(::asio::ip::tcp::v4(), PORT));
+    std::thread server_thread([&server_io](){ server_io.run(); });
 
     // client
-    boost::asio::io_service client_io;
+    ::asio::io_service client_io;
 
 	// avoid stop client_io when client closed
-	boost::asio::io_service::work work(client_io);
+	::asio::io_service::work work(client_io);
 
     auto on_connection_status=[](msgpack::rpc::asio::connection_status status)
     {
         std::cerr << status << std::endl;
     };
     msgpack::rpc::asio::client client(client_io, on_connection_status, on_error); 
-    client.connect_async(boost::asio::ip::tcp::endpoint(
-                    boost::asio::ip::address::from_string("127.0.0.1"), PORT));
-    boost::thread clinet_thread([&client_io](){ client_io.run(); });
+    client.connect_async(::asio::ip::tcp::endpoint(
+                    ::asio::ip::address::from_string("127.0.0.1"), PORT));
+    std::thread clinet_thread([&client_io](){ client_io.run(); });
 
     // sync request
 	int result1;
@@ -66,8 +68,8 @@ int main(int argc, char **argv)
     client.close();
 
     // reconnect
-    client.connect_async(boost::asio::ip::tcp::endpoint(
-                boost::asio::ip::address::from_string("127.0.0.1"), PORT));
+    client.connect_async(::asio::ip::tcp::endpoint(
+                ::asio::ip::address::from_string("127.0.0.1"), PORT));
 
     // request callback
 	auto on_result=[](msgpack::rpc::asio::func_call* result){

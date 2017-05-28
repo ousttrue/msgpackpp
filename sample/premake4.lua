@@ -9,9 +9,6 @@ language "C++"
 kind "ConsoleApp"
 --kind "WindowedApp"
 
-flags {
-    "Unicode",
-}
 files {
     "*.cpp", "*.h",
 }
