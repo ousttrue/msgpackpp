@@ -133,4 +133,3 @@ result = 6
 set_number(64) = ?
 get_number() = 64
 ```
-
