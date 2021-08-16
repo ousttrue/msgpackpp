@@ -9,3 +9,4 @@ obj
 *.vcxproj*
 .deps
 ipch
+build
