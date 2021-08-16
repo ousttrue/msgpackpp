@@ -1,13 +1,13 @@
-msgpack-rpc-asio
-================
+# msgpack-rpc-asio
+
 msgpack-rpc for windows.
 
-# Updates
+## ChangeLog
+* 20210816: replace premake to cmake(vscode settings)
 * 20170528: remove boost dependencies. use [asio standalone](https://github.com/chriskohlhoff/asio), [Catch](https://github.com/philsquared/Catch)
 * 20170528: fix vs2017 build.
 
-Files
------
+## Files
 ### msgpack-0.5.7
 * msgpack/src/*
 
@@ -31,21 +31,14 @@ Apache License Version 2.0
 * premake4.lua
 * README.md
 
-msgpackおよびmsgpack-rpcの本家と同じ Apache License Version 2.0
+Apache License Version 2.0
 
-Build
------
-- vs2010.batを実行
-- msgpack-rpc-asio.slnを開く
+## Build
 
-Requied
--------
-* gcc-4.5.4/vc2010
-* msgpack
-* boost
+* Open folder by vscode. `CMake: Configure`, `CMake: Build`
 
-Sample
-------
+## Sample
+
 ```c++
 #include <msgpack/rpc/asio.h>
 #include <thread>
