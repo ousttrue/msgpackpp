@@ -1,1 +1,2 @@
-subdirs(sample1 sample2)
+subdirs(sample2 pingpong)
+
