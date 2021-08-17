@@ -5,15 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "sample",
+            "name": "sample1",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/sample/Debug/sample.exe",
+            "program": "${workspaceFolder}/build/samples/sample1/sample1.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],
-            "console": "externalTerminal"
+            "console": "integratedTerminal"
         }
     ]
 }

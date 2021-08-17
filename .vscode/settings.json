@@ -1,3 +1,9 @@
 {
-    "testMate.cpp.log.logSentry": "disable_3"
+    "cmake.generator": "Ninja",
+    "cmake.configureArgs": [
+        "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
+    ],
+    "cSpell.words": [
+        "msgpackpp"
+    ],
 }

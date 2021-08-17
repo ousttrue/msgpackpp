@@ -1,1 +1,1 @@
-subdirs(msgpack asio catch)
+subdirs(msgpack msgpackpp asio catch)
