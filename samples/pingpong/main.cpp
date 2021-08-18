@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
     asio::streambuf buf;
     auto [e2, read_size] = co_await asio::async_read(
         socket, buf, asio::transfer_at_least(1), use_nothrow_awaitable);
-    return to_string(buf);
+    co_return to_string(buf);
   };
   auto result = spawn<std::string>(client_context, co);
   client_context.run();
