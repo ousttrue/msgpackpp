@@ -1,3 +1,4 @@
+#include "asio/read.hpp"
 #include <asio/awaitable.hpp>
 #include <asio/co_spawn.hpp>
 #include <asio/detached.hpp>
@@ -6,6 +7,7 @@
 #include <asio/ip/tcp.hpp>
 #include <asio/system_timer.hpp>
 #include <asio/use_awaitable.hpp>
+#include <asio/write.hpp>
 #include <functional>
 #include <future>
 #include <iostream>
@@ -38,42 +40,64 @@ public:
 
     while (true) {
 
-      auto [e, client] = co_await _acceptor.async_accept(use_nothrow_awaitable);
+      auto [e, socket] = co_await _acceptor.async_accept(use_nothrow_awaitable);
       if (e) {
+        std::cout << "[server]accept error: " << e << std::endl;
         break;
       }
+      std::cout << "[server]accepted" << std::endl;
+
+      auto ex = _context.get_executor();
+      asio::co_spawn(ex, session(std::move(socket)), asio::detached);
     }
   }
-};
 
-class client {
+  asio::awaitable<void> session(asio::ip::tcp::socket socket) {
 
-  asio::ip::tcp::socket _socket;
+    char buf[1024] = {0};
+    auto [e1, read_size] = co_await asio::async_read(
+        socket, asio::buffer(buf, sizeof(buf)), asio::transfer_at_least(1),
+        use_nothrow_awaitable);
 
-public:
-  asio::io_context &_context;
-  client(asio::io_context &context)
-      : _socket(context.get_executor()), _context(context) {}
-
-  asio::awaitable<void> connect_async(const asio::ip::tcp::endpoint &ep) {
-    auto [e] = co_await _socket.async_connect(ep, use_nothrow_awaitable);
-  }
-
-  template <typename R>
-  std::future<R> spawn(const std::function<asio::awaitable<R>()> &co) {
-    std::promise<R> p;
-    auto f = p.get_future();
-    auto task = [p = std::move(p), co]() mutable -> asio::awaitable<void> {
-      co_await co();
-      p.set_value();
-    };
-
-    auto ex = _context.get_executor();
-    asio::co_spawn(ex, std::move(task), asio::detached);
-
-    return f;
+    auto pong = std::string(buf, buf + read_size);
+    std::cout << "[server]ping: " << pong << std::endl;
+    pong += "pong";
+    auto [e2, write_size] = co_await asio::async_write(
+        socket, asio::buffer(pong), use_nothrow_awaitable);
+    std::cout << "[server]pong: " << write_size << std::endl;
   }
 };
+
+std::future<void> spawn(asio::io_context &context,
+                        const std::function<asio::awaitable<void>()> &co) {
+  std::promise<void> p;
+  auto f = p.get_future();
+  auto task = [p = std::move(p), co]() mutable -> asio::awaitable<void> {
+    co_await co();
+    p.set_value();
+  };
+
+  auto ex = context.get_executor();
+  asio::co_spawn(ex, std::move(task), asio::detached);
+
+  return f;
+}
+
+template <typename R>
+std::future<R> spawn(asio::io_context &context,
+                     const std::function<asio::awaitable<R>()> &co) {
+  std::promise<R> p;
+  auto f = p.get_future();
+  auto task = [p = std::move(p), co]() mutable -> asio::awaitable<void> {
+    auto value = co_await co();
+    p.set_value(value);
+  };
+
+  auto ex = context.get_executor();
+  asio::co_spawn(ex, std::move(task), asio::detached);
+
+  return f;
+}
 
 const auto PORT = 8070;
 
@@ -90,26 +114,41 @@ int main(int argc, char **argv) {
 
   // client
   asio::io_context client_context;
-  client client(client_context);
-  auto co = [&client, ep]() -> asio::awaitable<void> {
+  // client client(client_context);
+  auto co = [&context = client_context, ep]() -> asio::awaitable<std::string> {
     std::cout << "[client]wait 1000ms..." << std::endl;
-    asio::system_timer timer(client._context);
+    asio::system_timer timer(context);
     timer.expires_from_now(1000ms);
     co_await timer.async_wait(asio::use_awaitable);
 
     std::cout << "[client]connect: " << ep << "..." << std::endl;
-    co_await client.connect_async(ep);
+    asio::ip::tcp::socket socket(context);
+    co_await socket.async_connect(ep, use_nothrow_awaitable);
     std::cout << "[client]connected" << std::endl;
+
+    std::cout << "[client]ping..." << std::endl;
+    std::string ping("ping");
+    auto [e1, write_size] = co_await asio::async_write(
+        socket, asio::buffer(ping), use_nothrow_awaitable);
+    assert(write_size == 4);
+
+    std::cout << "[client]read..." << std::endl;
+    char buf[1024];
+    auto [e2, read_size] = co_await asio::async_read(
+        socket, asio::buffer(buf, sizeof(buf)), asio::transfer_at_least(1),
+        use_nothrow_awaitable);
+    std::string pong(buf, buf + read_size);
+    return pong;
   };
-  auto connected = client.spawn<void>(co);
-  std::thread client_thread([&client_context]() { client_context.run(); });
-  connected.get();
+  auto result = spawn<std::string>(client_context, co);
+  client_context.run();
+  auto pong = result.get();
+  std::cout << "pong: " << pong << std::endl;
 
   // stop asio
   server_context.stop();
-  client_thread.join();
   server_thread.join();
-  std::cout << "join" << std::endl;
+  std::cout << "[server]join" << std::endl;
 
   return 0;
 }
