@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/samples/pingpong/pingpong.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "integratedTerminal"
         },
@@ -22,7 +22,7 @@
             "program": "${workspaceFolder}/build/samples/sample1/sample1.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "integratedTerminal"
         }
