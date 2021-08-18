@@ -1,3 +1,5 @@
-add_executable(sample1 main.cpp)
-target_link_libraries(sample1 PRIVATE msgpackpp asio)
-set_property(TARGET sample1 PROPERTY CXX_STANDARD 17)
+set(TARGET_NAME sample1)
+add_executable(${TARGET_NAME} main.cpp)
+target_link_libraries(${TARGET_NAME} PRIVATE asio)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)
+target_compile_options(${TARGET_NAME} PUBLIC $<$<C_COMPILER_ID:MSVC>:/await>)
