@@ -5,17 +5,25 @@
 #include <asio/experimental/as_tuple.hpp>
 #include <asio/io_context.hpp>
 #include <asio/ip/tcp.hpp>
+#include <asio/streambuf.hpp>
 #include <asio/system_timer.hpp>
 #include <asio/use_awaitable.hpp>
 #include <asio/write.hpp>
 #include <functional>
 #include <future>
 #include <iostream>
+#include <string>
 #include <thread>
+
 using namespace std::chrono;
 
 constexpr auto use_nothrow_awaitable =
     asio::experimental::as_tuple(asio::use_awaitable);
+
+static std::string to_string(const asio::streambuf &buf) {
+  auto p = asio::buffer_cast<const char *>(buf.data());
+  return std::string(p, p + buf.size());
+}
 
 class server {
 
@@ -54,12 +62,11 @@ public:
 
   asio::awaitable<void> session(asio::ip::tcp::socket socket) {
 
-    char buf[1024] = {0};
+    asio::streambuf buf;
     auto [e1, read_size] = co_await asio::async_read(
-        socket, asio::buffer(buf, sizeof(buf)), asio::transfer_at_least(1),
-        use_nothrow_awaitable);
+        socket, buf, asio::transfer_at_least(1), use_nothrow_awaitable);
 
-    auto pong = std::string(buf, buf + read_size);
+    auto pong = to_string(buf);
     std::cout << "[server]ping: " << pong << std::endl;
     pong += "pong";
     auto [e2, write_size] = co_await asio::async_write(
@@ -133,12 +140,10 @@ int main(int argc, char **argv) {
     assert(write_size == 4);
 
     std::cout << "[client]read..." << std::endl;
-    char buf[1024];
+    asio::streambuf buf;
     auto [e2, read_size] = co_await asio::async_read(
-        socket, asio::buffer(buf, sizeof(buf)), asio::transfer_at_least(1),
-        use_nothrow_awaitable);
-    std::string pong(buf, buf + read_size);
-    return pong;
+        socket, buf, asio::transfer_at_least(1), use_nothrow_awaitable);
+    return to_string(buf);
   };
   auto result = spawn<std::string>(client_context, co);
   client_context.run();
