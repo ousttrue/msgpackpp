@@ -16,19 +16,19 @@
 #include <string>
 #include <thread>
 
-
 using namespace std::chrono;
 
 constexpr auto use_nothrow_awaitable =
     asio::experimental::as_tuple(asio::use_awaitable);
 
-static std::string to_string(const asio::streambuf &buf) {
+static std::string to_string(const asio::streambuf &buf)
+{
   auto p = asio::buffer_cast<const char *>(buf.data());
   return std::string(p, p + buf.size());
 }
 
-class server {
-
+class server
+{
   asio::io_context &_context;
   asio::ip::tcp::acceptor _acceptor;
 
@@ -36,7 +36,8 @@ public:
   server(asio::io_context &context) : _context(context), _acceptor(context) {}
   ~server() {}
 
-  void listen(const asio::ip::tcp::endpoint &ep) {
+  void listen(const asio::ip::tcp::endpoint &ep)
+  {
     std::cout << "[server]listen: " << ep << "..." << std::endl;
     _acceptor.open(ep.protocol());
     _acceptor.bind(ep);
@@ -46,12 +47,15 @@ public:
     asio::co_spawn(ex, accept_loop(), asio::detached);
   }
 
-  asio::awaitable<void> accept_loop() {
+  asio::awaitable<void> accept_loop()
+  {
 
-    while (true) {
+    while (true)
+    {
 
       auto [e, socket] = co_await _acceptor.async_accept(use_nothrow_awaitable);
-      if (e) {
+      if (e)
+      {
         std::cout << "[server]accept error: " << e << std::endl;
         break;
       }
@@ -62,7 +66,8 @@ public:
     }
   }
 
-  asio::awaitable<void> session(asio::ip::tcp::socket socket) {
+  asio::awaitable<void> session(asio::ip::tcp::socket socket)
+  {
 
     asio::streambuf buf;
     auto [e1, read_size] = co_await asio::async_read(
@@ -79,7 +84,33 @@ public:
 
 const auto PORT = 8070;
 
-int main(int argc, char **argv) {
+asio::awaitable<std::string> client(asio::io_context &context, asio::ip::tcp::endpoint ep)
+{
+  std::cout << "[client]wait 1000ms..." << std::endl;
+  asio::system_timer timer(context);
+  timer.expires_from_now(1000ms);
+  co_await timer.async_wait(asio::use_awaitable);
+
+  std::cout << "[client]connect: " << ep << "..." << std::endl;
+  asio::ip::tcp::socket socket(context);
+  co_await socket.async_connect(ep, asio::use_awaitable);
+  std::cout << "[client]connected" << std::endl;
+
+  std::cout << "[client]ping..." << std::endl;
+  std::string ping("ping");
+  auto write_size = co_await asio::async_write(socket, asio::buffer(ping),
+                                               asio::use_awaitable);
+  assert(write_size == 4);
+
+  std::cout << "[client]read..." << std::endl;
+  asio::streambuf buf;
+  auto read_size = co_await asio::async_read(
+      socket, buf, asio::transfer_at_least(1), asio::use_awaitable);
+  co_return to_string(buf);
+}
+
+int main(int argc, char **argv)
+{
 
   auto ep = asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"),
                                     PORT);
@@ -88,33 +119,12 @@ int main(int argc, char **argv) {
   asio::io_context server_context;
   server server(server_context);
   server.listen(ep);
-  std::thread server_thread([&server_context]() { server_context.run(); });
+  std::thread server_thread([&server_context]()
+                            { server_context.run(); });
 
   // client
   asio::io_context client_context;
-  auto co = [&context = client_context, ep]() -> asio::awaitable<std::string> {
-    std::cout << "[client]wait 1000ms..." << std::endl;
-    asio::system_timer timer(context);
-    timer.expires_from_now(1000ms);
-    co_await timer.async_wait(asio::use_awaitable);
-
-    std::cout << "[client]connect: " << ep << "..." << std::endl;
-    asio::ip::tcp::socket socket(context);
-    co_await socket.async_connect(ep, asio::use_awaitable);
-    std::cout << "[client]connected" << std::endl;
-
-    std::cout << "[client]ping..." << std::endl;
-    std::string ping("ping");
-    auto write_size = co_await asio::async_write(socket, asio::buffer(ping),
-                                                 asio::use_awaitable);
-    assert(write_size == 4);
-
-    std::cout << "[client]read..." << std::endl;
-    asio::streambuf buf;
-    auto read_size = co_await asio::async_read(
-        socket, buf, asio::transfer_at_least(1), asio::use_awaitable);
-    co_return to_string(buf);
-  };
+  auto co = std::bind(&client, std::ref(client_context), ep);
   auto result =
       asio::co_spawn(client_context.get_executor(), co, asio::use_future);
   client_context.run();

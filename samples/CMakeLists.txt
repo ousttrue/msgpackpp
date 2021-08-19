@@ -1,1 +1,1 @@
-subdirs(pingpong sample1 sample2)
+subdirs(pingpong dispatcher sample2)

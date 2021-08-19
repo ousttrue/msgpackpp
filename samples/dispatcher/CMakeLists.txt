@@ -1,4 +1,4 @@
-set(TARGET_NAME sample1)
+set(TARGET_NAME dispatcher)
 add_executable(${TARGET_NAME} main.cpp)
 target_link_libraries(${TARGET_NAME} PRIVATE asio msgpackpp)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)

@@ -16,10 +16,10 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "sample1",
+            "name": "dispatcher",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/samples/sample1/sample1.exe",
+            "program": "${workspaceFolder}/build/samples/dispatcher/dispatcher.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
