@@ -19,7 +19,7 @@
 #include <thread>
 #include <unordered_map>
 
-using namespace std::chrono;
+const auto PORT = 8070;
 
 constexpr auto use_nothrow_awaitable =
     asio::experimental::as_tuple(asio::use_awaitable);
@@ -104,81 +104,143 @@ public:
   }
 };
 
-class dispatcher {
-  std::unordered_map<std::string, msgpackpp::procedurecall> _map;
+class func_map {
+  std::list<std::string> _names;
+  std::unordered_map<std::string_view, msgpackpp::procedurecall> _map;
 
 public:
   template <typename F>
   void add_handler(const std::string_view &method, const F &f) {
+    _names.push_back(std::string(method.begin(), method.end()));
+    std::string_view key = _names.back();
     auto proc = msgpackpp::make_procedurecall(f);
-    _map.insert(std::make_pair(method, proc));
+    _map.insert(std::make_pair(key, proc));
   }
 
-  msgpackpp::bytes dispatch(const msgpackpp::parser &msg) {
-    auto method = msg[2].get_string();
-    auto found = _map.find(std::string(method.begin(), method.end()));
+  msgpackpp::bytes dispatch(const std::string_view method,
+                            const msgpackpp::parser &arg) {
+    auto found = _map.find(method);
+    if (found == _map.end()) {
+      throw std::runtime_error("method not found");
+    }
     auto proc = found->second;
-
-    auto result = proc(msg[3]);
-    auto response =
-        msgpackpp::make_rpc_response_packed(msg[1].get_number<int>(), "", result);
-    std::cout << "[dispatch]" << msg << "=>" << msgpackpp::parser(response)
-              << std::endl;
-    return response;
+    return proc(arg);
   }
 };
 
-const auto PORT = 8070;
+class messagepack_rpc {
+  uint32_t _nextRequestID = 1;
+  func_map _dispatcher;
+
+public:
+  func_map &dispatcher() { return _dispatcher; }
+
+  msgpackpp::bytes on_message(const msgpackpp::parser &message) {
+    if (!message.is_array()) {
+      throw std::runtime_error("not array");
+    }
+
+    auto message_type = message[0].get_number<int>();
+    switch (message_type) {
+    case 0:
+      // request:
+      return on_request(message);
+
+    case 1:
+      // respone:
+      on_response(message);
+      return {};
+
+    case 2:
+      // notify:
+      on_notify(message);
+      return {};
+
+    default:
+      throw std::runtime_error("unknown message_type");
+    }
+  }
+
+  template <typename R, typename... ARGS>
+  asio::awaitable<R> request(asio::ip::tcp::socket &socket,
+                             const std::string &method, ARGS... args) {
+    auto request =
+        msgpackpp::make_rpc_request(_nextRequestID++, method, args...);
+    auto write_size = co_await asio::async_write(socket, asio::buffer(request),
+                                                 asio::use_awaitable);
+
+    asio::streambuf buf;
+    auto read_size = co_await asio::async_read(
+        socket, buf, asio::transfer_at_least(1), asio::use_awaitable);
+    auto response = to_vector(buf);
+    auto parsed = msgpackpp::parser(response);
+    std::cout << "[client]" << msgpackpp::parser(request) << "=>" << parsed
+              << std::endl;
+    co_return parsed[3].get_number<int>();
+  }
+
+private:
+  msgpackpp::bytes on_request(const msgpackpp::parser &request) {
+    auto message_id = request[1].get_number<int>();
+    try {
+      // success
+      auto result = _dispatcher.dispatch(request[2].get_string(), request[3]);
+      auto response =
+          msgpackpp::make_rpc_response_packed(message_id, "", result);
+      return response;
+    } catch (const std::runtime_error &e) {
+      // error
+      auto response =
+          msgpackpp::make_rpc_response(message_id, e.what(), msgpackpp::nil);
+      return response;
+    }
+  }
+
+  void on_response(const msgpackpp::parser &response) {
+    throw std::runtime_error("not implemented");
+  }
+
+  void on_notify(const msgpackpp::parser &notify) {
+    throw std::runtime_error("not implemented");
+  }
+};
+
+asio::awaitable<int> client(asio::io_context &context,
+                            asio::ip::tcp::endpoint ep) {
+  std::cout << "[client]connect: " << ep << "..." << std::endl;
+  asio::ip::tcp::socket socket(context);
+  co_await socket.async_connect(ep, asio::use_awaitable);
+  std::cout << "[client]connected" << std::endl;
+
+  messagepack_rpc rpc;
+  auto result = co_await rpc.request<int>(socket, "add", 1, 2);
+  co_return result;
+}
 
 int main(int argc, char **argv) {
 
   auto ep = asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"),
                                     PORT);
 
-  // dispatcher
-  dispatcher d;
-  d.add_handler("add", [](int a, int b) { return a + b; });
+  // server rpc
+  messagepack_rpc server_rpc;
+  server_rpc.dispatcher().add_handler("add",
+                                      [](int a, int b) { return a + b; });
 
   // server
   asio::io_context server_context;
-  server server(server_context,
-                std::bind(&dispatcher::dispatch, &d, std::placeholders::_1));
+  server server(server_context, std::bind(&messagepack_rpc::on_message,
+                                          &server_rpc, std::placeholders::_1));
   server.listen(ep);
   std::thread server_thread([&server_context]() { server_context.run(); });
 
   // client
   asio::io_context client_context;
-  auto co = [&context = client_context, ep]() -> asio::awaitable<int> {
-    std::cout << "[client]wait 1000ms..." << std::endl;
-    asio::system_timer timer(context);
-    timer.expires_from_now(1000ms);
-    co_await timer.async_wait(asio::use_awaitable);
-
-    std::cout << "[client]connect: " << ep << "..." << std::endl;
-    asio::ip::tcp::socket socket(context);
-    co_await socket.async_connect(ep, asio::use_awaitable);
-    std::cout << "[client]connected" << std::endl;
-
-    auto request = msgpackpp::make_rpc_request(1, "add", 1, 2);
-    std::cout << "[client]" << msgpackpp::parser(request) << std::endl;
-    auto write_size = co_await asio::async_write(socket, asio::buffer(request),
-                                                 asio::use_awaitable);
-    assert(write_size == 10);
-
-    std::cout << "[client]read..." << std::endl;
-    asio::streambuf buf;
-    auto read_size = co_await asio::async_read(
-        socket, buf, asio::transfer_at_least(1), asio::use_awaitable);
-    auto response = to_vector(buf);
-    auto parsed = msgpackpp::parser(response);
-    std::cout << "[client]" << parsed << std::endl;
-    return parsed[3].get_number<int>();
-  };
+  auto co = std::bind(&client, std::ref(client_context), ep);
   auto result =
       asio::co_spawn(client_context.get_executor(), co, asio::use_future);
   client_context.run();
-  auto pong = result.get();
-  std::cout << "pong: " << pong << std::endl;
+  std::cout << "result = " << result.get() << std::endl;
 
   // stop asio
   server_context.stop();

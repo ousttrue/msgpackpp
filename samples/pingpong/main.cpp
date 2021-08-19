@@ -16,19 +16,17 @@
 #include <string>
 #include <thread>
 
-using namespace std::chrono;
+const auto PORT = 8070;
 
 constexpr auto use_nothrow_awaitable =
     asio::experimental::as_tuple(asio::use_awaitable);
 
-static std::string to_string(const asio::streambuf &buf)
-{
+static std::string to_string(const asio::streambuf &buf) {
   auto p = asio::buffer_cast<const char *>(buf.data());
   return std::string(p, p + buf.size());
 }
 
-class server
-{
+class server {
   asio::io_context &_context;
   asio::ip::tcp::acceptor _acceptor;
 
@@ -36,8 +34,7 @@ public:
   server(asio::io_context &context) : _context(context), _acceptor(context) {}
   ~server() {}
 
-  void listen(const asio::ip::tcp::endpoint &ep)
-  {
+  void listen(const asio::ip::tcp::endpoint &ep) {
     std::cout << "[server]listen: " << ep << "..." << std::endl;
     _acceptor.open(ep.protocol());
     _acceptor.bind(ep);
@@ -47,15 +44,12 @@ public:
     asio::co_spawn(ex, accept_loop(), asio::detached);
   }
 
-  asio::awaitable<void> accept_loop()
-  {
+  asio::awaitable<void> accept_loop() {
 
-    while (true)
-    {
+    while (true) {
 
       auto [e, socket] = co_await _acceptor.async_accept(use_nothrow_awaitable);
-      if (e)
-      {
+      if (e) {
         std::cout << "[server]accept error: " << e << std::endl;
         break;
       }
@@ -66,8 +60,7 @@ public:
     }
   }
 
-  asio::awaitable<void> session(asio::ip::tcp::socket socket)
-  {
+  asio::awaitable<void> session(asio::ip::tcp::socket socket) {
 
     asio::streambuf buf;
     auto [e1, read_size] = co_await asio::async_read(
@@ -82,10 +75,10 @@ public:
   }
 };
 
-const auto PORT = 8070;
+asio::awaitable<std::string> client(asio::io_context &context,
+                                    asio::ip::tcp::endpoint ep) {
+  using namespace std::literals::chrono_literals;
 
-asio::awaitable<std::string> client(asio::io_context &context, asio::ip::tcp::endpoint ep)
-{
   std::cout << "[client]wait 1000ms..." << std::endl;
   asio::system_timer timer(context);
   timer.expires_from_now(1000ms);
@@ -109,8 +102,7 @@ asio::awaitable<std::string> client(asio::io_context &context, asio::ip::tcp::en
   co_return to_string(buf);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
 
   auto ep = asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"),
                                     PORT);
@@ -119,8 +111,7 @@ int main(int argc, char **argv)
   asio::io_context server_context;
   server server(server_context);
   server.listen(ep);
-  std::thread server_thread([&server_context]()
-                            { server_context.run(); });
+  std::thread server_thread([&server_context]() { server_context.run(); });
 
   // client
   asio::io_context client_context;
