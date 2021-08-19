@@ -1,1 +1,1 @@
-subdirs(sample2)
+subdirs(dispatcher sample2)
