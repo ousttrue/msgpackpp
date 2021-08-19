@@ -34,17 +34,18 @@ static std::span<const uint8_t> to_span(const asio::streambuf &buf) {
   return std::span<const uint8_t>{p, buf.size()};
 }
 
-using on_message = std::function<msgpackpp::bytes(const msgpackpp::parser &)>;
+using on_accepted_func =
+    std::function<asio::awaitable<void>(asio::ip::tcp::socket)>;
 
 class server {
 
   asio::io_context &_context;
   asio::ip::tcp::acceptor _acceptor;
-  on_message _callback;
+  on_accepted_func _on_accepted;
 
 public:
-  server(asio::io_context &context, const on_message &callback)
-      : _context(context), _acceptor(context), _callback(callback) {}
+  server(asio::io_context &context, const on_accepted_func &on_accepted)
+      : _context(context), _acceptor(context), _on_accepted(on_accepted) {}
   ~server() {}
 
   void listen(const asio::ip::tcp::endpoint &ep) {
@@ -69,37 +70,7 @@ public:
       std::cout << "[server]accepted" << std::endl;
 
       auto ex = _context.get_executor();
-      asio::co_spawn(ex, session(std::move(socket)), asio::detached);
-    }
-  }
-
-  asio::awaitable<void> session(asio::ip::tcp::socket socket) {
-
-    asio::streambuf buf;
-    while (true) {
-      auto [e1, read_size] = co_await asio::async_read(
-          socket, buf, asio::transfer_at_least(1), use_nothrow_awaitable);
-
-      auto span = to_span(buf);
-
-      auto parsed = msgpackpp::parser(span.data(), (int)span.size());
-      while (true) {
-        auto current = parsed;
-        try {
-          parsed = parsed.next();
-
-          // callback
-          auto result = _callback(current);
-          std::cout << "[server]" << current << "=>"
-                    << msgpackpp::parser(result) << std::endl;
-          auto write_size = co_await asio::async_write(
-              socket, asio::buffer(result), asio::use_awaitable);
-
-        } catch (const std::runtime_error &) {
-          break;
-        }
-      }
-      buf.consume(parsed.data() - span.data());
+      asio::co_spawn(ex, _on_accepted(std::move(socket)), asio::detached);
     }
   }
 };
@@ -179,6 +150,36 @@ public:
     co_return parsed[3].get_number<int>();
   }
 
+  asio::awaitable<void> read_stream(asio::ip::tcp::socket socket) {
+
+    asio::streambuf buf;
+    while (true) {
+      auto [e1, read_size] = co_await asio::async_read(
+          socket, buf, asio::transfer_at_least(1), use_nothrow_awaitable);
+
+      auto span = to_span(buf);
+
+      auto parsed = msgpackpp::parser(span.data(), (int)span.size());
+      while (true) {
+        auto current = parsed;
+        try {
+          parsed = parsed.next();
+
+          // callback
+          auto result = on_message(current);
+          std::cout << "[server]" << current << "=>"
+                    << msgpackpp::parser(result) << std::endl;
+          auto write_size = co_await asio::async_write(
+              socket, asio::buffer(result), asio::use_awaitable);
+
+        } catch (const std::runtime_error &) {
+          break;
+        }
+      }
+      buf.consume(parsed.data() - span.data());
+    }
+  }
+
 private:
   msgpackpp::bytes on_request(const msgpackpp::parser &request) {
     auto message_id = request[1].get_number<int>();
@@ -229,8 +230,11 @@ int main(int argc, char **argv) {
 
   // server
   asio::io_context server_context;
-  server server(server_context, std::bind(&messagepack_rpc::on_message,
-                                          &server_rpc, std::placeholders::_1));
+  server server(server_context,
+                [&server_rpc](asio::ip::tcp::socket socket) mutable
+                -> asio::awaitable<void> {
+                  return server_rpc.read_stream(std::move(socket));
+                });
   server.listen(ep);
   std::thread server_thread([&server_context]() { server_context.run(); });
 
