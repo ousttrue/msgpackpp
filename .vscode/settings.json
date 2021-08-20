@@ -7,6 +7,8 @@
         "msgpackpp"
     ],
     "files.associations": {
-        "unordered_map": "cpp"
+        "unordered_map": "cpp",
+        "functional": "cpp",
+        "future": "cpp"
     },
 }

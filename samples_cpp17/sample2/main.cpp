@@ -42,9 +42,9 @@ int main(int argc, char **argv) {
   std::thread clinet_thread([&client_io]() { client_io.run(); });
 
   // sync request
-  int result1;
-  // std::cout << "add, 1, 2 = " << client.call_sync(&result1, "add", 1, 2) <<
-  // std::endl;
+  auto result1 = client.call<int>("add", 1, 2);
+  // result1.wait();
+  std::cout << "add, 1, 2 = " << result1.get() << std::endl;
 
   // close
   client.close();

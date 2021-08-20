@@ -25,10 +25,11 @@ private:
   std::mutex m_mutex;
   std::condition_variable_any m_cond;
 
-  std::function<void(func_call *)> m_callback;
+  using on_result_func = std::function<void(func_call *)>;
+  on_result_func m_callback;
 
 public:
-  func_call(const std::string &s, std::function<void(func_call *)> callback)
+  func_call(const std::string &s, const on_result_func &callback)
       : m_status(STATUS_WAIT), m_request(s), m_callback(callback) {}
 
   void set_result(const msgpackpp::parser &result) {
@@ -99,7 +100,6 @@ private:
     m_cond.notify_all();
   }
 };
-typedef std::function<void(func_call *)> func_call_callback_t;
 inline std::ostream &operator<<(std::ostream &os, const func_call &request) {
   os << request.string();
   return os;
@@ -137,6 +137,19 @@ public:
     m_session->connect_async(endpoint);
   }
 
+  template <typename R, typename... ARGS>
+  std::future<R> call(const std::string &method, ARGS... args) {
+
+    auto p = std::make_shared<std::promise<R>>();
+    auto f = p->get_future();
+
+    auto request =
+        msgpackpp::make_rpc_request(m_next_msg_id++, method, args...);
+    send_async(request, p);
+
+    return f;
+  }
+
   void close() { m_session->close(); }
 
   bool is_connect() {
@@ -144,19 +157,20 @@ public:
   }
 
 private:
-  template <typename Parameter>
-  std::shared_ptr<func_call>
-  send_async(const msgpackpp::bytes &request,
-             func_call_callback_t callback = func_call_callback_t()) {
+  template <typename R>
+  void send_async(const msgpackpp::bytes &request, std::shared_ptr<std::promise<R>> p) {
 
     auto parsed = msgpackpp::parser(request);
 
-    auto req = std::make_shared<func_call>(parsed.to_json(), callback);
+    auto req = std::make_shared<func_call>(
+        parsed.to_json(), [p](func_call *f) {
+          R value;
+          msgpackpp::parser(f->get_result()) >> value;
+          p->set_value(value);
+        });
     m_request_map.insert(std::make_pair(parsed[1].get_number<int>(), req));
 
-    m_session->write_async(sbuf);
-
-    return req;
+    m_session->write_async(request);
   }
 
 private:
