@@ -194,6 +194,12 @@ public:
     m_handlerMap.insert(std::make_pair(method, proc));
   }
 
+  template <typename C, typename R, typename ...AS>
+  void add_bind(const std::string &method, C *c, R(C::*f)(AS...)) {
+    auto proc = msgpackpp::make_methodcall(c, f);
+    m_handlerMap.insert(std::make_pair(method, proc));
+  }
+
   void dispatch(const msgpackpp::parser &msg,
                 std::shared_ptr<session> session) {
     // extract msgpack request
@@ -503,7 +509,6 @@ private:
           throw error;
         }
       } else {
-        std::cout << "[server]accepted: " << std::endl;
         new_connection->accept(socket);
         // next
         self->start_accept();
