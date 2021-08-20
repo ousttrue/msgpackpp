@@ -16,8 +16,8 @@ TEST_CASE( "client" )
 	// avoid stop client_io when client closed
 	::asio::io_service::work work(client_io);
 
-	msgpack::rpc::asio::client client(client_io, [](
-                msgpack::rpc::asio::connection_status status){
+	msgpack_rpc::client client(client_io, [](
+                msgpack_rpc::connection_status status){
 
             std::cout << "connection_status: " << status << std::endl;
 

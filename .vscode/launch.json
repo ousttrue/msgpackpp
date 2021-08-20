@@ -5,15 +5,37 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "sample",
+            "name": "pingpong",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/sample/Debug/sample.exe",
+            "program": "${workspaceFolder}/build/samples_cpp20/pingpong/pingpong.exe",
             "args": [],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
-            "console": "externalTerminal"
-        }
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "dispatcher",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/samples_cpp17/dispatcher/dispatcher.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "sample2",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/samples_cpp17/sample2/sample2.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "integratedTerminal"
+        },
     ]
 }

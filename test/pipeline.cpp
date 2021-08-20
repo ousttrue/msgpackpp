@@ -12,7 +12,7 @@ TEST_CASE( "pipeline" )
 
     // client
     ::asio::io_service client_io;
-	msgpack::rpc::asio::client client(client_io);
+	msgpack_rpc::client client(client_io);
     client.connect_async(::asio::ip::tcp::endpoint(
                 ::asio::ip::address::from_string("127.0.0.1"), PORT));
     std::thread client_thread([&client_io](){ client_io.run(); });
