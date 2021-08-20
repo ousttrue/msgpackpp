@@ -4,8 +4,8 @@ msgpack-rpc for windows.
 
 ## Version 2.0
 
-* require latest compiler
-* `c++20` co_await
+* [x] `c++11` std::promise/future
+* [ ] `c++20` co_await
 
 ## ChangeLog
 * 20210816: replace premake to cmake(vscode settings)

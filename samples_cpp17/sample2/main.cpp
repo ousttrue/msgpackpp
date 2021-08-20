@@ -1,6 +1,6 @@
 #include <asio.hpp>
 #include <iostream>
-#include <msgpack/rpc/asio.h>
+#include <msgpack_rpc.h>
 #include <thread>
 
 #define NAMEOF(name) #name
