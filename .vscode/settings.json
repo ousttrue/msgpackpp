@@ -6,4 +6,7 @@
     "cSpell.words": [
         "msgpackpp"
     ],
+    "files.associations": {
+        "unordered_map": "cpp"
+    },
 }

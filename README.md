@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     const static int PORT=8070;
 
     // dispatcher
-    msgpack::rpc::asio::dispatcher dispatcher;
+    msgpack_rpc::dispatcher dispatcher;
     dispatcher.add_handler("add", [](int a, int b)->int{ return a+b; });
     dispatcher.add_handler("mul", [](float a, float b)->float{ return a*b; });
     SomeClass s;
@@ -49,9 +49,9 @@ int main(int argc, char **argv)
 
     // server
     boost::asio::io_service server_io;
-    msgpack::rpc::asio::server server(server_io, [&dispatcher](
+    msgpack_rpc::server server(server_io, [&dispatcher](
                 const msgpack::object &msg, 
-                std::shared_ptr<msgpack::rpc::asio::session> session)
+                std::shared_ptr<msgpack_rpc::session> session)
             {
                 dispatcher.dispatch(msg, session);
             });
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 
     // client
     boost::asio::io_service client_io;
-    msgpack::rpc::asio::client client(client_io); 
+    msgpack_rpc::client client(client_io); 
     client.connect_async(boost::asio::ip::tcp::endpoint(
                     boost::asio::ip::address::from_string("127.0.0.1"), PORT));
     std::thread clinet_thread([&client_io](){ client_io.run(); });

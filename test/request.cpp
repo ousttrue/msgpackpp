@@ -5,7 +5,7 @@
 
 TEST_CASE( "request0" )
 {
-    msgpack::rpc::asio::request_factory factory;
+    msgpack_rpc::request_factory factory;
 
     {
         auto request=factory.create("count");
@@ -16,7 +16,7 @@ TEST_CASE( "request0" )
 
 TEST_CASE( "request1" )
 {
-    msgpack::rpc::asio::request_factory factory;
+    msgpack_rpc::request_factory factory;
 
     {
         auto request=factory.create("sin", 3.14);
@@ -28,7 +28,7 @@ TEST_CASE( "request1" )
 
 TEST_CASE( "request2" )
 {
-    msgpack::rpc::asio::request_factory factory;
+    msgpack_rpc::request_factory factory;
 
 
     {
@@ -49,7 +49,7 @@ TEST_CASE( "request2" )
 
 TEST_CASE( "request3" )
 {
-    msgpack::rpc::asio::request_factory factory;
+    msgpack_rpc::request_factory factory;
 
 
     {
@@ -64,7 +64,7 @@ TEST_CASE( "request3" )
 
 TEST_CASE( "request4" )
 {
-    msgpack::rpc::asio::request_factory factory;
+    msgpack_rpc::request_factory factory;
 
 
     {

@@ -12,7 +12,7 @@ TEST_CASE( "func0" )
 
     // client
     ::asio::io_service client_io;
-	msgpack::rpc::asio::client client(client_io);
+	msgpack_rpc::client client(client_io);
     client.connect_async(::asio::ip::tcp::endpoint(
                 ::asio::ip::address::from_string("127.0.0.1"), PORT));
     std::thread client_thread([&client_io](){ client_io.run(); });
@@ -33,13 +33,13 @@ TEST_CASE( "func1" )
 
     // client
     ::asio::io_service client_io;
-	msgpack::rpc::asio::client client(client_io);
+	msgpack_rpc::client client(client_io);
     client.connect_async(::asio::ip::tcp::endpoint(
                 ::asio::ip::address::from_string("127.0.0.1"), PORT));
     std::thread client_thread([&client_io](){ client_io.run(); });
 
     // request
-    std::shared_ptr<msgpack::rpc::asio::func_call> req=client.call_async("acc", 1);
+    std::shared_ptr<msgpack_rpc::func_call> req=client.call_async("acc", 1);
     req->sync();
     int result;
     REQUIRE(req->sync().convert(&result)== 1);
@@ -56,7 +56,7 @@ TEST_CASE( "func2" )
 
     // client
     ::asio::io_service client_io;
-	msgpack::rpc::asio::client client(client_io);
+	msgpack_rpc::client client(client_io);
     client.connect_async(::asio::ip::tcp::endpoint(
                 ::asio::ip::address::from_string("127.0.0.1"), PORT));
     std::thread client_thread([&client_io](){ client_io.run(); });
@@ -77,7 +77,7 @@ TEST_CASE( "func3" )
 
     // client
     ::asio::io_service client_io;
-	msgpack::rpc::asio::client client(client_io);
+	msgpack_rpc::client client(client_io);
     client.connect_async(::asio::ip::tcp::endpoint(
                 ::asio::ip::address::from_string("127.0.0.1"), PORT));
     std::thread client_thread([&client_io](){ client_io.run(); });
@@ -98,7 +98,7 @@ TEST_CASE( "func4" )
 
     // client
     ::asio::io_service client_io;
-	msgpack::rpc::asio::client client(client_io);
+	msgpack_rpc::client client(client_io);
     client.connect_async(::asio::ip::tcp::endpoint(
                 ::asio::ip::address::from_string("127.0.0.1"), PORT));
     std::thread client_thread([&client_io](){ client_io.run(); });

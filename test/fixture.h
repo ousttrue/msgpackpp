@@ -7,11 +7,11 @@ struct Fixture
     // dispatcher
     ::asio::io_service dispatcher_io;
 	::asio::io_service::work work;
-	msgpack::rpc::asio::dispatcher dispatcher;
+	msgpack_rpc::dispatcher dispatcher;
     std::shared_ptr<std::thread> dispatcher_thread;
 
     ::asio::io_service server_io;
-    msgpack::rpc::asio::server server;
+    msgpack_rpc::server server;
     std::shared_ptr<std::thread> server_thread;
     std::mutex m_mutex;
 
@@ -28,7 +28,7 @@ struct Fixture
 		auto pDispatcherIO=&dispatcher_io;
         auto on_receive=[pDispatcher, pDispatcherIO](
                 const msgpack::object &msg, 
-                std::shared_ptr<msgpack::rpc::asio::session> session)
+                std::shared_ptr<msgpack_rpc::session> session)
         {
             auto self=pDispatcher;
             pDispatcherIO->post([self, msg, session](){

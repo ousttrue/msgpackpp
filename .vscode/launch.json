@@ -25,6 +25,17 @@
             "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "integratedTerminal"
-        }
+        },
+        {
+            "name": "sample2",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/samples_cpp17/sample2/sample2.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "integratedTerminal"
+        },
     ]
 }
