@@ -1,7 +1,7 @@
 #pragma once
 #include <asio.hpp>
 #include <asio/streambuf.hpp>
-#include <msgpackpp.h>
+#include <vector>
 
 namespace msgpack_rpc {
 
@@ -10,8 +10,8 @@ class session : public std::enable_shared_from_this<session> {
   std::shared_ptr<::asio::ip::tcp::socket> m_socket;
   asio::streambuf m_buf;
   // on_read
-  using on_read_t =
-      std::function<void(const msgpackpp::bytes &, std::shared_ptr<session>)>;
+  using on_read_t = std::function<void(const std::vector<uint8_t> &,
+                                       std::shared_ptr<session>)>;
   on_read_t m_on_read;
 
   connection_status m_connection_status;
@@ -83,30 +83,32 @@ public:
       return;
     }
     // auto pac = &m_pac;
-    auto on_read = [shared = shared_from_this()](const asio::error_code error,
-                                                 const size_t bytes_transferred) {
-      // if (error && (error != ::asio::error::eof)) {
-      //   if (shared->m_error_handler) {
-      //     shared->m_error_handler(error);
-      //   }
-      //   shared->set_connection_status(connection_none);
-      //   // no more read
-      //   return;
-      // } else {
-      //   auto data = shared->to_vector();
-      //   if (shared->m_on_read) {
-      //     shared->m_on_read(data, shared);
-      //   }
-      //   shared->m_buf.consume(bytes_transferred);
+    auto on_read = [shared =
+                        shared_from_this()](const asio::error_code error,
+                                            const size_t bytes_transferred) {
+      if (error) {
+        if (shared->m_error_handler) {
+          shared->m_error_handler(error);
+        }
+        shared->set_connection_status(connection_none);
+        // no more read
+        return;
+      } else {
+        auto data = shared->to_vector();
+        assert(!data.empty());
+        if (shared->m_on_read) {
+          shared->m_on_read(data, shared);
+        }
+        shared->m_buf.consume(bytes_transferred);
 
-      //   // read loop
-      //   shared->start_read();
-      // }
+        // read loop
+        shared->start_read();
+      }
     };
     async_read(*m_socket, m_buf, asio::transfer_at_least(1), on_read);
   }
 
-  void write_async(msgpackpp::bytes msg) {
+  void write_async(std::vector<uint8_t> msg) {
     if (!m_socket) {
       assert(false);
       return;

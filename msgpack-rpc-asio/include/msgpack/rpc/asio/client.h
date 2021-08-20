@@ -158,16 +158,16 @@ public:
 
 private:
   template <typename R>
-  void send_async(const msgpackpp::bytes &request, std::shared_ptr<std::promise<R>> p) {
+  void send_async(const msgpackpp::bytes &request,
+                  std::shared_ptr<std::promise<R>> p) {
 
     auto parsed = msgpackpp::parser(request);
 
-    auto req = std::make_shared<func_call>(
-        parsed.to_json(), [p](func_call *f) {
-          R value;
-          msgpackpp::parser(f->get_result()) >> value;
-          p->set_value(value);
-        });
+    auto req = std::make_shared<func_call>(parsed.to_json(), [p](func_call *f) {
+      R value;
+      msgpackpp::parser(f->get_result()) >> value;
+      p->set_value(value);
+    });
     m_request_map.insert(std::make_pair(parsed[1].get_number<int>(), req));
 
     m_session->write_async(request);
@@ -186,7 +186,8 @@ private:
       auto id = msg[1].get_number<int>();
       auto found = m_request_map.find(id);
       if (found != m_request_map.end()) {
-        if (msg[2].is_nil()) {
+        if (msg[2].is_nil() ||
+            msg[2].is_string() && msg[2].get_string() == "") {
           found->second->set_result(msg[3]);
         } else if (msg[2].is_bool()) {
           bool isError = msg[2].get_bool();

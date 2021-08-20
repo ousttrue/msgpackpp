@@ -3,6 +3,8 @@
 #include <msgpack/rpc/asio.h>
 #include <thread>
 
+#define NAMEOF(name) #name
+
 int main(int argc, char **argv) {
   const static int PORT = 8070;
 
@@ -13,11 +15,11 @@ int main(int argc, char **argv) {
                          [](float a, float b) -> float { return a * b; });
 
   msgpack_rpc::error_handler_t on_error = [](::asio::error_code error) {
-    std::cerr << error.message() << std::endl;
+    std::cerr << "[server.on_error]" << error.message() << std::endl;
   };
 
   // server
-  asio::io_service server_io;
+  asio::io_context server_io;
   auto on_receive =
       [&dispatcher](const msgpackpp::bytes &msg,
                     std::shared_ptr<msgpack_rpc::session> session) {
@@ -28,15 +30,19 @@ int main(int argc, char **argv) {
   std::thread server_thread([&server_io]() { server_io.run(); });
 
   // client
-  ::asio::io_service client_io;
+  ::asio::io_context client_io;
 
   // avoid stop client_io when client closed
-  ::asio::io_service::work work(client_io);
+  ::asio::io_context::work work(client_io);
 
   auto on_connection_status = [](msgpack_rpc::connection_status status) {
-    std::cerr << status << std::endl;
+    std::cout << "[client]" << status << std::endl;
   };
   msgpack_rpc::client client(client_io, on_connection_status, on_error);
+
+  //
+  // connect
+  //
   client.connect_async(::asio::ip::tcp::endpoint(
       ::asio::ip::address::from_string("127.0.0.1"), PORT));
   std::thread clinet_thread([&client_io]() { client_io.run(); });
@@ -48,20 +54,6 @@ int main(int argc, char **argv) {
 
   // close
   client.close();
-
-  // reconnect
-  client.connect_async(::asio::ip::tcp::endpoint(
-      ::asio::ip::address::from_string("127.0.0.1"), PORT));
-
-  // request callback
-  // auto on_result=[](msgpack_rpc::func_call* result){
-  // 	int result2;
-  // 	std::cout << "add, 3, 4 = " << result->convert(&result2) << std::endl;
-  // };
-  // auto result2=client.call_async(on_result, "add", 3, 4);
-
-  // block
-  // result2->sync();
 
   // stop asio
   client_io.stop();
