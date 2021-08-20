@@ -19,7 +19,7 @@
             "name": "dispatcher",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/samples_cpp20/dispatcher/dispatcher.exe",
+            "program": "${workspaceFolder}/build/samples_cpp17/dispatcher/dispatcher.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

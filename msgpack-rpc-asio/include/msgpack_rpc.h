@@ -2,6 +2,7 @@
 #include <asio.hpp>
 #include <asio/streambuf.hpp>
 #include <msgpackpp.h>
+#include <unordered_map>
 
 namespace msgpack_rpc {
 
@@ -23,7 +24,7 @@ enum connection_status {
   connection_connected,
   connection_error,
 };
-typedef std::function<void(connection_status)> connection_callback_t;
+using connection_callback_t = std::function<void(connection_status)>;
 
 struct msgerror : std::runtime_error {
   error_code code;
@@ -347,14 +348,26 @@ public:
       : m_io_service(io_service), m_connection_callback(connection_callback),
         m_error_handler(error_handler) {}
 
-  void connect_async(const ::asio::ip::tcp::endpoint &endpoint) {
+  std::future<void> connect_async(const ::asio::ip::tcp::endpoint &endpoint) {
+    auto p = std::make_shared<std::promise<void>>();
+    auto f = p->get_future();
+
     auto c = this;
     auto on_read = [c](const msgpackpp::bytes &msg,
                        std::shared_ptr<session> session) {
       c->receive(msg, session);
     };
-    m_session = session::create(m_io_service, on_read, m_connection_callback);
+    auto on_connected = [p](connection_status s) {
+      if (s == connection_status::connection_connected) {
+        p->set_value();
+      } else if (s == connection_error) {
+        // p->set_exception();
+      }
+    };
+    m_session = session::create(m_io_service, on_read, on_connected);
     m_session->connect_async(endpoint);
+
+    return f;
   }
 
   template <typename R, typename... ARGS>
@@ -490,6 +503,7 @@ private:
           throw error;
         }
       } else {
+        std::cout << "[server]accepted: " << std::endl;
         new_connection->accept(socket);
         // next
         self->start_accept();

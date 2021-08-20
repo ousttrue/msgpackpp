@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
   dispatcher.add_handler("mul",
                          [](float a, float b) -> float { return a * b; });
 
-  msgpack_rpc::error_handler_t on_error = [](::asio::error_code error) {
+  msgpack_rpc::error_handler_t on_error = [](asio::error_code error) {
     std::cerr << "[server.on_error]" << error.message() << std::endl;
   };
 
@@ -26,14 +26,14 @@ int main(int argc, char **argv) {
         dispatcher.dispatch(msg, session);
       };
   msgpack_rpc::server server(server_io, on_receive, on_error);
-  server.listen(::asio::ip::tcp::endpoint(::asio::ip::tcp::v4(), PORT));
+  server.listen(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), PORT));
   std::thread server_thread([&server_io]() { server_io.run(); });
 
   // client
-  ::asio::io_context client_io;
+  asio::io_context client_io;
 
   // avoid stop client_io when client closed
-  ::asio::io_context::work work(client_io);
+  asio::io_context::work work(client_io);
 
   auto on_connection_status = [](msgpack_rpc::connection_status status) {
     std::cout << "[client]" << status << std::endl;
@@ -43,8 +43,8 @@ int main(int argc, char **argv) {
   //
   // connect
   //
-  client.connect_async(::asio::ip::tcp::endpoint(
-      ::asio::ip::address::from_string("127.0.0.1"), PORT));
+  client.connect_async(asio::ip::tcp::endpoint(
+      asio::ip::address::from_string("127.0.0.1"), PORT));
   std::thread clinet_thread([&client_io]() { client_io.run(); });
 
   // sync request
