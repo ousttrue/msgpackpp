@@ -1,7 +1,7 @@
 add_executable(
   test
   main.cpp
-  # call.cpp
+  call.cpp
   # client.cpp
   dispatcher.cpp
   # error.cpp
