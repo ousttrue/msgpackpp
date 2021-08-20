@@ -1,9 +1,7 @@
-#include <asio.hpp>
 #include <iostream>
 #include <msgpack_rpc.h>
 #include <thread>
 
-#define NAMEOF(name) #name
 
 int main(int argc, char **argv) {
   const static int PORT = 8070;
