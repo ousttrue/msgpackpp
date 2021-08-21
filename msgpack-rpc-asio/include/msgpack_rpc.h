@@ -115,7 +115,6 @@ public:
   asio::ip::tcp::socket &Reader() { return m_socket; }
   asio::ip::tcp::socket &Writer() { return m_socket; }
 };
-class WindowsStreamTransport {};
 
 template <typename Transport>
 class session : public std::enable_shared_from_this<session<Transport>> {
@@ -136,11 +135,12 @@ class session : public std::enable_shared_from_this<session<Transport>> {
 public:
   ~session() {}
 
-  static std::shared_ptr<session<Transport>>
-  create(Transport t, on_read_t func = on_read_t(),
+  template <typename T>
+  static std::shared_ptr<session<T>>
+  create(T t, on_read_t func = on_read_t(),
          error_handler_t error_handler = error_handler_t()) {
-    auto s = std::shared_ptr<session<SocketTransport>>(
-        new session<Transport>(std::move(t), func, error_handler));
+    auto s = std::shared_ptr<session<T>>(
+        new session<T>(std::move(t), func, error_handler));
     s->start_read();
     return s;
   }
@@ -388,10 +388,11 @@ private:
   }
 
 public:
-  template <typename R, typename... ARGS>
-  std::future<R> call(const std::string &method, ARGS... args) {
+  template <typename... ARGS>
+  std::future<std::vector<uint8_t>> call(const std::string &method,
+                                         ARGS... args) {
 
-    auto p = std::make_shared<std::promise<R>>();
+    auto p = std::make_shared<std::promise<std::vector<uint8_t>>>();
     auto f = p->get_future();
 
     auto request =
@@ -405,18 +406,15 @@ public:
 private:
   std::vector<uint8_t> m_write_buffer;
 
-  template <typename R>
-  void send_request_async(const msgpackpp::bytes &request,
-                          std::shared_ptr<std::promise<R>> p) {
+  void
+  send_request_async(const msgpackpp::bytes &request,
+                     std::shared_ptr<std::promise<std::vector<uint8_t>>> p) {
 
     auto parsed = msgpackpp::parser(request);
 
     auto req = std::make_shared<func_call>(
-        parsed.to_json(), [p](func_call *f) mutable {
-          R value;
-          msgpackpp::parser(f->get_result()) >> value;
-          p->set_value(value);
-        });
+        parsed.to_json(),
+        [p](func_call *f) mutable { p->set_value(f->get_result()); });
     m_request_map.insert(std::make_pair(parsed[1].get_number<int>(), req));
 
     m_session->write_async(request);

@@ -21,7 +21,7 @@ TEST_CASE("func0") {
   // request
   msgpack_rpc::rpc client;
   client.attach(std::move(socket));
-  REQUIRE(client.call<int>("zero").get() == 0);
+  REQUIRE(msgpackpp::deserialize<int>(client.call("zero").get()) == 0);
 
   client_io.stop();
   client_thread.join();
@@ -45,9 +45,9 @@ TEST_CASE("func1") {
   // request
   msgpack_rpc::rpc client;
   client.attach(std::move(socket));
-  auto req = client.call<int>("acc", 1);
+  auto req = client.call("acc", 1);
   req.wait();
-  int result = req.get();
+  int result = msgpackpp::deserialize<int>(req.get());
   REQUIRE(result == 1);
 
   client_io.stop();
@@ -72,7 +72,7 @@ TEST_CASE("func2") {
   // request
   msgpack_rpc::rpc client;
   client.attach(std::move(socket));
-  REQUIRE(client.call<int>("add", 3, 4).get() == 7);
+  REQUIRE(msgpackpp::deserialize<int>(client.call("add", 3, 4).get()) == 7);
 
   client_io.stop();
   client_thread.join();
@@ -96,7 +96,8 @@ TEST_CASE("func3") {
   // request
   msgpack_rpc::rpc client;
   client.attach(std::move(socket));
-  REQUIRE(client.call<int>("add3", 3, 4, 5).get() == 12);
+  REQUIRE(msgpackpp::deserialize<int>(client.call("add3", 3, 4, 5).get()) ==
+          12);
 
   client_io.stop();
   client_thread.join();
@@ -120,7 +121,8 @@ TEST_CASE("func4") {
   // request
   msgpack_rpc::rpc client;
   client.attach(std::move(socket));
-  REQUIRE(client.call<int>("add4", 3, 4, 5, 6).get() == 18);
+  REQUIRE(msgpackpp::deserialize<int>(client.call("add4", 3, 4, 5, 6).get()) ==
+          18);
 
   client_io.stop();
   client_thread.join();
