@@ -37,5 +37,16 @@
             "environment": [],
             "console": "integratedTerminal"
         },
+        {
+            "name": "dispatch_20",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/samples_cpp20/dispatch_20/dispatch_20.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "console": "integratedTerminal"
+        }
     ]
 }
