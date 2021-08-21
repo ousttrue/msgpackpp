@@ -2,6 +2,8 @@
 
 `headeronly` msgpack-rpc `<msgpack_rpc.h>`
 
+<https://github.com/msgpack-rpc/msgpack-rpc/blob/master/spec.md>
+
 ## dependencies
 
 * `headeronly` [asio standalone](http://think-async.com/Asio/index.html) `<asio.hpp> etc...`
