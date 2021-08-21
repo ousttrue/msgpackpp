@@ -4,12 +4,14 @@
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
     ],
     "cSpell.words": [
+        "Nvim",
         "msgpackpp"
     ],
     "files.associations": {
         "unordered_map": "cpp",
         "functional": "cpp",
         "future": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "memory": "cpp"
     },
 }

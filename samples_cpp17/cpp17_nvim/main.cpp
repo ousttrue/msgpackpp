@@ -1,57 +1,84 @@
+#include <asio/windows/stream_handle.hpp>
 #include <iostream>
 #include <msgpack_rpc.h>
-#include <thread>
+
+class Nvim {
+  HANDLE _stdin_read = nullptr;
+  HANDLE _stdin_write = nullptr;
+  HANDLE _stdout_read = nullptr;
+  HANDLE _stdout_write = nullptr;
+  PROCESS_INFORMATION _process_info = {0};
+
+  Nvim() {
+    SECURITY_ATTRIBUTES sec_attribs = {0};
+    sec_attribs.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sec_attribs.bInheritHandle = true;
+
+    CreatePipe(&_stdin_read, &_stdin_write, &sec_attribs, 0);
+    CreatePipe(&_stdout_read, &_stdout_write, &sec_attribs, 0);
+  }
+
+public:
+  ~Nvim() {
+    DWORD exit_code;
+    GetExitCodeProcess(_process_info.hProcess, &exit_code);
+
+    if (exit_code == STILL_ACTIVE) {
+      CloseHandle(this->_stdin_read);
+      CloseHandle(this->_stdin_write);
+      CloseHandle(this->_stdout_read);
+      CloseHandle(this->_stdout_write);
+      CloseHandle(this->_process_info.hThread);
+      TerminateProcess(this->_process_info.hProcess, 0);
+      CloseHandle(this->_process_info.hProcess);
+    }
+  }
+
+  HANDLE WriteHandle() const { return _stdin_write; }
+  HANDLE ReadHandle() const { return _stdout_read; }
+
+  static std::shared_ptr<Nvim> Launch(std::wstring command) {
+
+    auto nvim = std::shared_ptr<Nvim>(new Nvim());
+
+    STARTUPINFOW startup_info = {0};
+    startup_info.cb = sizeof(STARTUPINFO);
+    startup_info.dwFlags = STARTF_USESTDHANDLES;
+    startup_info.hStdInput = nvim->_stdin_read;
+    startup_info.hStdOutput = nvim->_stdout_write;
+    startup_info.hStdError = nvim->_stdout_write;
+
+    if (!CreateProcessW(nullptr, command.data(), nullptr, nullptr, true,
+                        CREATE_NO_WINDOW, nullptr, nullptr, &startup_info,
+                        &nvim->_process_info)) {
+      return nullptr;
+    }
+
+    HANDLE job_object = CreateJobObjectW(nullptr, nullptr);
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION job_info = {0};
+    job_info.BasicLimitInformation.LimitFlags =
+        JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    SetInformationJobObject(job_object, JobObjectExtendedLimitInformation,
+                            &job_info, sizeof(job_info));
+    AssignProcessToJobObject(job_object, nvim->_process_info.hProcess);
+
+    return nvim;
+  }
+};
 
 int main(int argc, char **argv) {
-  const static int PORT = 8070;
 
-  // dispatcher
-  msgpack_rpc::rpc dispatcher;
-  dispatcher.add_handler("add", [](int a, int b) -> int { return a + b; });
-  dispatcher.add_handler("mul",
-                         [](float a, float b) -> float { return a * b; });
+  auto nvim = Nvim::Launch(L"nvim --embed");
+  if (!nvim) {
+    return 1;
+  }
 
-  msgpack_rpc::error_handler_t on_error = [](asio::error_code error) {
-    std::cerr << "[server.on_error]" << error.message() << std::endl;
-  };
+  asio::io_context context;
+  auto reader = asio::windows::stream_handle(context, nvim->ReadHandle());
+  auto writer = asio::windows::stream_handle(context, nvim->WriteHandle());
 
-  // server
-  asio::io_context server_io;
-  auto on_accepted = [&dispatcher](asio::ip::tcp::socket socket) {
-    dispatcher.attach(std::move(socket));
-  };
-  msgpack_rpc::server server(server_io, on_accepted, on_error);
-  server.listen(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), PORT));
-  std::thread server_thread([&server_io]() { server_io.run(); });
-
-  // client
-  asio::io_context client_io;
-  asio::io_context::work work(client_io);
-
-  //
-  // connect
-  //
-  asio::ip::tcp::endpoint ep(asio::ip::address::from_string("127.0.0.1"), PORT);
-  asio::ip::tcp::socket socket(client_io);
-  std::thread clinet_thread([&client_io]() { client_io.run(); });
-  std::cout << "[client]connect..." << std::endl;
-  msgpack_rpc::connect_async(socket, ep).get();
-  std::cout << "[client]connected" << std::endl;
-
-  msgpack_rpc::rpc client;
-  client.attach(std::move(socket));
-  auto result1 = client.call<int>("add", 1, 2);
-  std::cout << "add, 1, 2 = " << result1.get() << std::endl;
-
-  client.session()->socket().close();
-
-
-  // stop asio
-  client_io.stop();
-  clinet_thread.join();
-
-  server_io.stop();
-  server_thread.join();
+  msgpack_rpc::rpc rpc;
+  // rpc.attach(reader, writer);
 
   return 0;
 }

@@ -107,8 +107,19 @@ public:
       : std::runtime_error(msg), code(code) {}
 };
 
-class session : public std::enable_shared_from_this<session> {
+class SocketTransport {
   asio::ip::tcp::socket m_socket;
+
+public:
+  SocketTransport(asio::ip::tcp::socket socket) : m_socket(std::move(socket)) {}
+  asio::ip::tcp::socket &Reader() { return m_socket; }
+  asio::ip::tcp::socket &Writer() { return m_socket; }
+};
+class WindowsStreamTransport {};
+
+template <typename Transport>
+class session : public std::enable_shared_from_this<session<Transport>> {
+  Transport m_transport;
 
   // on_read
   asio::streambuf m_buf;
@@ -118,24 +129,23 @@ class session : public std::enable_shared_from_this<session> {
   error_handler_t m_error_handler;
 
   // force shard_ptr
-  session(asio::ip::tcp::socket socket, on_read_t on_read,
-          error_handler_t error_handler)
-      : m_socket(std::move(socket)), m_on_read(on_read),
+  session(Transport transport, on_read_t on_read, error_handler_t error_handler)
+      : m_transport(std::move(transport)), m_on_read(on_read),
         m_error_handler(error_handler) {}
 
 public:
   ~session() {}
 
-  static std::shared_ptr<session>
-  create(asio::ip::tcp::socket socket, on_read_t func = on_read_t(),
+  static std::shared_ptr<session<Transport>>
+  create(Transport t, on_read_t func = on_read_t(),
          error_handler_t error_handler = error_handler_t()) {
-    auto s = std::shared_ptr<session>(
-        new session(std::move(socket), func, error_handler));
+    auto s = std::shared_ptr<session<SocketTransport>>(
+        new session<Transport>(std::move(t), func, error_handler));
     s->start_read();
     return s;
   }
 
-  asio::ip::tcp::socket &socket() { return m_socket; }
+  Transport &transport() { return m_transport; }
 
 private:
   std::vector<uint8_t> to_vector() const {
@@ -144,28 +154,29 @@ private:
   }
 
   void start_read() {
-    auto on_read = [shared =
-                        shared_from_this()](const asio::error_code error,
+    auto on_read =
+        [shared = this->shared_from_this()](const asio::error_code error,
                                             const size_t bytes_transferred) {
-      if (error) {
-        if (shared->m_error_handler) {
-          shared->m_error_handler(error);
-        }
-        // no more read
-        return;
-      } else {
-        auto data = shared->to_vector();
-        assert(!data.empty());
-        if (shared->m_on_read) {
-          shared->m_on_read(data);
-        }
-        shared->m_buf.consume(bytes_transferred);
+          if (error) {
+            if (shared->m_error_handler) {
+              shared->m_error_handler(error);
+            }
+            // no more read
+            return;
+          } else {
+            auto data = shared->to_vector();
+            assert(!data.empty());
+            if (shared->m_on_read) {
+              shared->m_on_read(data);
+            }
+            shared->m_buf.consume(bytes_transferred);
 
-        // read loop
-        shared->start_read();
-      }
-    };
-    async_read(m_socket, m_buf, asio::transfer_at_least(1), on_read);
+            // read loop
+            shared->start_read();
+          }
+        };
+    async_read(m_transport.Reader(), m_buf, asio::transfer_at_least(1),
+               on_read);
   }
 
 public:
@@ -173,7 +184,7 @@ public:
     auto p = std::make_shared<std::vector<uint8_t>>();
     *p = buffer;
     asio::async_write(
-        m_socket, asio::buffer(*p),
+        m_transport.Writer(), asio::buffer(*p),
         [p /* keep write buffer */](asio::error_code ec, size_t size) {
           //
           auto a = 0;
@@ -283,24 +294,21 @@ inline std::ostream &operator<<(std::ostream &os, const func_call &request) {
   return os;
 }
 
-class rpc {
+template <typename Transport> class rpc_base {
   std::unordered_map<std::string, msgpackpp::procedurecall> m_handlerMap;
   int m_next_msg_id = 1;
   std::unordered_map<int, std::shared_ptr<func_call>> m_request_map;
-  std::shared_ptr<session> m_session;
+  std::shared_ptr<session<Transport>> m_session;
 
 public:
-  rpc() {}
-  ~rpc() {}
-
-  void attach(asio::ip::tcp::socket socket) {
+  void attach(Transport t) {
     // start socket read
-    m_session = msgpack_rpc::session::create(
-        std::move(socket),
+    m_session = msgpack_rpc::session<Transport>::create(
+        std::move(t),
         [self = this](const auto &data) mutable { self->on_receive(data); });
   }
 
-  std::shared_ptr<session> session() const { return m_session; }
+  std::shared_ptr<session<Transport>> session() const { return m_session; }
 
 public:
   template <typename F>
@@ -414,5 +422,6 @@ private:
     m_session->write_async(request);
   }
 };
+using rpc = rpc_base<SocketTransport>;
 
 } // namespace msgpack_rpc
