@@ -1,1 +1,1 @@
-subdirs(dispatcher sample2)
+subdirs(cpp17_dispatcher cpp17_nvim)

@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "pingpong",
+            "name": "cpp17_dispatcher",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/samples_cpp20/pingpong/pingpong.exe",
+            "program": "${workspaceFolder}/build/samples_cpp17/cpp17_dispatcher/cpp17_dispatcher.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -16,10 +16,10 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "dispatcher",
+            "name": "cpp17_nvim",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/samples_cpp17/dispatcher/dispatcher.exe",
+            "program": "${workspaceFolder}/build/samples_cpp17/cpp17_nvim/cpp17_nvim.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -27,10 +27,10 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "sample2",
+            "name": "cpp20_pingpong",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/samples_cpp17/sample2/sample2.exe",
+            "program": "${workspaceFolder}/build/samples_cpp20/cpp20_pingpong/cpp20_pingpong.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -38,15 +38,15 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "dispatch_20",
+            "name": "cpp20_dispatch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/samples_cpp20/dispatch_20/dispatch_20.exe",
+            "program": "${workspaceFolder}/build/samples_cpp20/cpp20_dispatch/cpp20_dispatch.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "integratedTerminal"
-        }
+        },
     ]
 }
