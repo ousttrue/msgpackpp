@@ -3,18 +3,14 @@
 #include <msgpack_rpc.h>
 
 struct Fixture {
-  // dispatcher
-  asio::io_service dispatcher_io;
-  asio::io_service::work work;
-  msgpack_rpc::dispatcher dispatcher;
-  std::shared_ptr<std::thread> dispatcher_thread;
+  msgpack_rpc::rpc dispatcher;
 
   asio::io_service server_io;
   msgpack_rpc::server server;
   std::shared_ptr<std::thread> server_thread;
   std::mutex m_mutex;
 
-  Fixture(int port) : server(server_io), work(dispatcher_io) {
+  Fixture(int port) : server(server_io) {
     dispatcher.add_handler("zero", &Fixture::zero);
     dispatcher.add_handler("acc", &Fixture::unary);
     dispatcher.add_handler("add", &Fixture::binary);
@@ -23,16 +19,10 @@ struct Fixture {
     dispatcher.add_handler(
         "add4", [](int a, int b, int c, int d) { return a + b + c + d; });
 
-    auto pDispatcher = &dispatcher;
-    auto pDispatcherIO = &dispatcher_io;
-    auto on_receive = [pDispatcher, pDispatcherIO](
-                          const msgpackpp::bytes &msg,
-                          std::shared_ptr<msgpack_rpc::session> session) {
-      auto self = pDispatcher;
-      pDispatcherIO->post(
-          [self, msg, session]() { self->dispatch(msg, session); });
-    };
-    server.set_on_receive(on_receive);
+    server.set_on_accepted(
+        [pDispatcher = &dispatcher](asio::ip::tcp::socket socket) {
+          pDispatcher->attach(std::move(socket));
+        });
 
     auto &mutex = m_mutex;
     auto error_handler = [&mutex](asio::error_code error) {
@@ -48,13 +38,8 @@ struct Fixture {
 
     server.listen(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
     server_thread = std::make_shared<std::thread>([&] { server_io.run(); });
-
-    dispatcher_thread =
-        std::make_shared<std::thread>([&] { dispatcher_io.run(); });
   }
   ~Fixture() {
-    dispatcher_io.stop();
-    dispatcher_thread->join();
     server_io.stop();
     server_thread->join();
   }

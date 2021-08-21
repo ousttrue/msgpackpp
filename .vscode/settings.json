@@ -9,6 +9,7 @@
     "files.associations": {
         "unordered_map": "cpp",
         "functional": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "*.ipp": "cpp"
     },
 }

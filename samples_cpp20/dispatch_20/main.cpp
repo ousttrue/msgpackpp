@@ -1,31 +1,40 @@
 #include <iostream>
 #include <msgpack_rpc.h>
 
+#include <asio/awaitable.hpp>
+#include <asio/experimental/awaitable_operators.hpp>
+
 const auto PORT = 8070;
 
-int client(asio::io_context &context, asio::ip::tcp::endpoint ep) {
+asio::awaitable<int> client(asio::io_context &context,
+                            asio::ip::tcp::endpoint ep) {
+
+  // auto client = co_await msgpack_rpc::client::connect_awaitable(context, ep);
+
+  // // client
+  // asio::io_context client_io;
+  // msgpack_rpc::client client(client_io);
+  // // asio::io_context::work work(client_io);
+  // std::thread client_thread([&client_io]() {
+  //   client_io.run();
+  //   std::cout << "[client]exit" << std::endl;
+  // });
+
+  // std::cout << "[client]connect: " << ep << "..." << std::endl;
   // client
-  asio::io_context client_io;
-  msgpack_rpc::client client(client_io);
-  // asio::io_context::work work(client_io);
-  std::thread client_thread([&client_io]() {
-    client_io.run();
-    std::cout << "[client]exit" << std::endl;
-  });
+  //     .connect_async(asio::ip::tcp::endpoint(
+  //         asio::ip::address::from_string("127.0.0.1"), PORT))
+  //     .get();
+  // std::cout << "[client]connected" << std::endl;
 
-  std::cout << "[client]connect: " << ep << "..." << std::endl;
-  client
-      .connect_async(asio::ip::tcp::endpoint(
-          asio::ip::address::from_string("127.0.0.1"), PORT))
-      .get();
-  std::cout << "[client]connected" << std::endl;
+  // auto result = client.call<int>("add", 1, 2).get();
 
-  auto result = client.call<int>("add", 1, 2).get();
+  // client_io.stop();
+  // client_thread.join();
 
-  client_io.stop();
-  client_thread.join();
+  // co_return result;
 
-  return result;
+  co_return 1;
 }
 
 int main(int argc, char **argv) {
@@ -34,24 +43,23 @@ int main(int argc, char **argv) {
                                     PORT);
 
   // server rpc
-  msgpack_rpc::dispatcher dispatcher;
+  msgpack_rpc::rpc dispatcher;
   dispatcher.add_handler("add", [](int a, int b) { return a + b; });
 
   // server
   asio::io_context server_context;
-  msgpack_rpc::server server(
-      server_context,
-      [&dispatcher](const msgpackpp::bytes &msg,
-                    std::shared_ptr<msgpack_rpc::session> session) {
-        dispatcher.dispatch(msg, session);
-      });
+  msgpack_rpc::server server(server_context,
+                             [&dispatcher](asio::ip::tcp::socket socket) {
+                               dispatcher.attach(std::move(socket));
+                             });
   server.listen(ep);
   std::thread server_thread([&server_context]() { server_context.run(); });
 
   // client
   asio::io_context client_context;
-  auto result = client(client_context, ep);
-  std::cout << "result = " << result << std::endl;
+  auto result = asio::co_spawn(client_context.get_executor(),
+                               client(client_context, ep), asio::use_future);
+  std::cout << "result = " << result.get() << std::endl;
 
   // stop asio
   server_context.stop();

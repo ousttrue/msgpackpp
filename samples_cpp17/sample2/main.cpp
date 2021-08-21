@@ -2,12 +2,11 @@
 #include <msgpack_rpc.h>
 #include <thread>
 
-
 int main(int argc, char **argv) {
   const static int PORT = 8070;
 
   // dispatcher
-  msgpack_rpc::dispatcher dispatcher;
+  msgpack_rpc::rpc dispatcher;
   dispatcher.add_handler("add", [](int a, int b) -> int { return a + b; });
   dispatcher.add_handler("mul",
                          [](float a, float b) -> float { return a * b; });
@@ -18,40 +17,34 @@ int main(int argc, char **argv) {
 
   // server
   asio::io_context server_io;
-  auto on_receive =
-      [&dispatcher](const msgpackpp::bytes &msg,
-                    std::shared_ptr<msgpack_rpc::session> session) {
-        dispatcher.dispatch(msg, session);
-      };
-  msgpack_rpc::server server(server_io, on_receive, on_error);
+  auto on_accepted = [&dispatcher](asio::ip::tcp::socket socket) {
+    dispatcher.attach(std::move(socket));
+  };
+  msgpack_rpc::server server(server_io, on_accepted, on_error);
   server.listen(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), PORT));
   std::thread server_thread([&server_io]() { server_io.run(); });
 
   // client
   asio::io_context client_io;
-
-  // avoid stop client_io when client closed
   asio::io_context::work work(client_io);
-
-  auto on_connection_status = [](msgpack_rpc::connection_status status) {
-    std::cout << "[client]" << status << std::endl;
-  };
-  msgpack_rpc::client client(client_io, on_connection_status, on_error);
 
   //
   // connect
   //
-  client.connect_async(asio::ip::tcp::endpoint(
-      asio::ip::address::from_string("127.0.0.1"), PORT));
+  asio::ip::tcp::endpoint ep(asio::ip::address::from_string("127.0.0.1"), PORT);
+  asio::ip::tcp::socket socket(client_io);
   std::thread clinet_thread([&client_io]() { client_io.run(); });
+  std::cout << "[client]connect..." << std::endl;
+  msgpack_rpc::connect_async(socket, ep).get();
+  std::cout << "[client]connected" << std::endl;
 
-  // sync request
+  msgpack_rpc::rpc client;
+  client.attach(std::move(socket));
   auto result1 = client.call<int>("add", 1, 2);
-  // result1.wait();
   std::cout << "add, 1, 2 = " << result1.get() << std::endl;
 
-  // close
-  client.close();
+  client.session()->socket().close();
+
 
   // stop asio
   client_io.stop();

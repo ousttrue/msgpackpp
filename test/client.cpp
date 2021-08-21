@@ -11,34 +11,24 @@ TEST_CASE("client") {
   Fixture fixture(PORT);
 
   // client
-  ::asio::io_service client_io;
-  // avoid stop client_io when client closed
-  ::asio::io_service::work work(client_io);
-
-  msgpack_rpc::client client(
-      client_io, [](msgpack_rpc::connection_status status) {
-        std::cout << "connection_status: " << status << std::endl;
-      });
-
-  client.connect_async(::asio::ip::tcp::endpoint(
-      ::asio::ip::address::from_string("127.0.0.1"), PORT));
+  asio::io_service client_io;
+  asio::io_context::work work(client_io);
+  asio::ip::tcp::socket socket(client_io);
   std::thread client_thread([&client_io]() { client_io.run(); });
+  msgpack_rpc::connect_async(
+      socket, asio::ip::tcp::endpoint(
+                  ::asio::ip::address::from_string("127.0.0.1"), PORT))
+      .get();
 
   // request
+  msgpack_rpc::rpc client;
+  client.attach(std::move(socket));
   REQUIRE(client.call<int>("add", 1, 2).get() == 3);
 
   auto request2 = client.call<int>("add", 3, 4);
   request2.wait();
   int result2 = request2.get();
   REQUIRE(result2 == 7);
-
-  // close
-  client.close();
-  // no active socket.
-
-  // reconnect
-  client.connect_async(::asio::ip::tcp::endpoint(
-      ::asio::ip::address::from_string("127.0.0.1"), PORT));
 
   auto request3 = client.call<int>("add", 5, 6);
   request3.wait();
