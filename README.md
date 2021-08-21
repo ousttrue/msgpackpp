@@ -1,11 +1,11 @@
 # msgpack-rpc-asio
 
-msgpack-rpc for windows.
+`headeronly` msgpack-rpc `<msgpack_rpc.h>`
 
 ## dependencies
 
-* asio standalone
-* msgpackpp
+* `headeronly` [asio standalone](http://think-async.com/Asio/index.html) `<asio.hpp> etc...`
+* `headeronly` [msgpackpp](https://github.com/ousttrue/msgpackpp) `<msgpackpp.h>`
 
 ## Version 2
 
