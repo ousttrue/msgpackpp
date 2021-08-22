@@ -16,8 +16,9 @@ class Nvim {
   std::wstring m_command;
 
   Nvim(const wchar_t *command) : m_command(command) {
-    SECURITY_ATTRIBUTES sec_attribs{.nLength = sizeof(SECURITY_ATTRIBUTES),
-                                    .bInheritHandle = true};
+    SECURITY_ATTRIBUTES sec_attribs;
+    sec_attribs.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sec_attribs.bInheritHandle = true;
     CreatePipe(&this->_stdin_read, &this->_stdin_write, &sec_attribs, 0);
     CreatePipe(&this->_stdout_read, &this->_stdout_write, &sec_attribs, 0);
   }
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
 
   msgpackpp::rpc_base<msgpackpp::WindowsPipeTransport> rpc;
   rpc.attach(msgpackpp::WindowsPipeTransport(context, nvim->ReadHandle(),
-                                               nvim->WriteHandle()));
+                                             nvim->WriteHandle()));
 
   std::thread context_thead([&context]() { context.run(); });
 
