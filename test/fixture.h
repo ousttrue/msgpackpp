@@ -1,12 +1,12 @@
 #pragma once
 #include <iostream>
-#include <msgpack_rpc.h>
+#include <msgpackpp/rpc.h>
 
 struct Fixture {
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
 
   asio::io_service server_io;
-  msgpack_rpc::server server;
+  msgpackpp::server server;
   std::shared_ptr<std::thread> server_thread;
   std::mutex m_mutex;
 
@@ -25,16 +25,16 @@ struct Fixture {
         });
 
     auto &mutex = m_mutex;
-    auto error_handler = [&mutex](asio::error_code error) {
-      if (error == asio::error::connection_reset) {
-        // closed
-        return;
-      }
-      std::lock_guard<std::mutex> lock(mutex);
-      auto msg = error.message();
-      std::cerr << msg << std::endl;
-    };
-    server.set_error_handler(error_handler);
+    // auto error_handler = [&mutex](asio::error_code error) {
+    //   if (error == asio::error::connection_reset) {
+    //     // closed
+    //     return;
+    //   }
+    //   std::lock_guard<std::mutex> lock(mutex);
+    //   auto msg = error.message();
+    //   std::cerr << msg << std::endl;
+    // };
+    // server.set_error_handler(error_handler);
 
     server.listen(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
     server_thread = std::make_shared<std::thread>([&] { server_io.run(); });

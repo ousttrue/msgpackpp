@@ -1,7 +1,7 @@
 #include <catch.hpp>
 
 #include "fixture.h"
-#include <msgpack_rpc.h>
+#include <msgpackpp/rpc.h>
 
 TEST_CASE("func0") {
   const static int PORT = 8070;
@@ -13,13 +13,13 @@ TEST_CASE("func0") {
   asio::io_context::work work(client_io);
   asio::ip::tcp::socket socket(client_io);
   std::thread client_thread([&client_io]() { client_io.run(); });
-  msgpack_rpc::connect_async(
+  msgpackpp::connect_async(
       socket, asio::ip::tcp::endpoint(
                   ::asio::ip::address::from_string("127.0.0.1"), PORT))
       .get();
 
   // request
-  msgpack_rpc::rpc client;
+  msgpackpp::rpc client;
   client.attach(std::move(socket));
   REQUIRE(msgpackpp::deserialize<int>(client.request("zero").get()) == 0);
 
@@ -37,13 +37,13 @@ TEST_CASE("func1") {
   asio::io_context::work work(client_io);
   asio::ip::tcp::socket socket(client_io);
   std::thread client_thread([&client_io]() { client_io.run(); });
-  msgpack_rpc::connect_async(
+  msgpackpp::connect_async(
       socket, asio::ip::tcp::endpoint(
                   ::asio::ip::address::from_string("127.0.0.1"), PORT))
       .get();
 
   // request
-  msgpack_rpc::rpc client;
+  msgpackpp::rpc client;
   client.attach(std::move(socket));
   auto req = client.request("acc", 1);
   req.wait();
@@ -64,13 +64,13 @@ TEST_CASE("func2") {
   asio::io_context::work work(client_io);
   asio::ip::tcp::socket socket(client_io);
   std::thread client_thread([&client_io]() { client_io.run(); });
-  msgpack_rpc::connect_async(
+  msgpackpp::connect_async(
       socket, asio::ip::tcp::endpoint(
                   ::asio::ip::address::from_string("127.0.0.1"), PORT))
       .get();
 
   // request
-  msgpack_rpc::rpc client;
+  msgpackpp::rpc client;
   client.attach(std::move(socket));
   REQUIRE(msgpackpp::deserialize<int>(client.request("add", 3, 4).get()) == 7);
 
@@ -88,13 +88,13 @@ TEST_CASE("func3") {
   asio::io_context::work work(client_io);
   asio::ip::tcp::socket socket(client_io);
   std::thread client_thread([&client_io]() { client_io.run(); });
-  msgpack_rpc::connect_async(
+  msgpackpp::connect_async(
       socket, asio::ip::tcp::endpoint(
                   ::asio::ip::address::from_string("127.0.0.1"), PORT))
       .get();
 
   // request
-  msgpack_rpc::rpc client;
+  msgpackpp::rpc client;
   client.attach(std::move(socket));
   REQUIRE(msgpackpp::deserialize<int>(client.request("add3", 3, 4, 5).get()) ==
           12);
@@ -113,13 +113,13 @@ TEST_CASE("func4") {
   asio::io_context::work work(client_io);
   asio::ip::tcp::socket socket(client_io);
   std::thread client_thread([&client_io]() { client_io.run(); });
-  msgpack_rpc::connect_async(
+  msgpackpp::connect_async(
       socket, asio::ip::tcp::endpoint(
                   ::asio::ip::address::from_string("127.0.0.1"), PORT))
       .get();
 
   // request
-  msgpack_rpc::rpc client;
+  msgpackpp::rpc client;
   client.attach(std::move(socket));
   REQUIRE(msgpackpp::deserialize<int>(client.request("add4", 3, 4, 5, 6).get()) ==
           18);

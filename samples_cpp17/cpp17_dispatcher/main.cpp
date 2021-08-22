@@ -1,5 +1,5 @@
 #include <iostream>
-#include <msgpack_rpc.h>
+#include <msgpackpp/rpc.h>
 
 const auto PORT = 8070;
 
@@ -12,11 +12,11 @@ int client(asio::io_context &context, asio::ip::tcp::endpoint ep) {
 
   // connect
   asio::ip::tcp::socket socket(context);
-  msgpack_rpc::connect_async(socket, ep).get();
+  msgpackpp::connect_async(socket, ep).get();
   std::cout << "[client]connected" << std::endl;
 
   // client
-  msgpack_rpc::rpc client;
+  msgpackpp::rpc client;
   client.attach(std::move(socket));
   auto result = client.request("add", 1, 2).get();
 
@@ -37,12 +37,12 @@ int main(int argc, char **argv) {
                                     PORT);
 
   // server rpc
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
   dispatcher.add_handler("add", [](int a, int b) { return a + b; });
 
   // server
   asio::io_context server_context;
-  msgpack_rpc::server server(
+  msgpackpp::server server(
       server_context, [&dispatcher](asio::ip::tcp::socket socket) mutable {
         dispatcher.attach(std::move(socket));
       });

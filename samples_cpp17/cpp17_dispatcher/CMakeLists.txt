@@ -1,3 +1,4 @@
 set(TARGET_NAME cpp17_dispatcher)
 add_executable(${TARGET_NAME} main.cpp)
-target_link_libraries(${TARGET_NAME} PRIVATE asio msgpack-rpc-asio)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
+target_link_libraries(${TARGET_NAME} PRIVATE asio msgpackpp)
