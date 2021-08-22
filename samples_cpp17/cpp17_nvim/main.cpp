@@ -4,47 +4,23 @@
 
 auto STDINPIPE = L"\\\\.\\pipe\\nvim_stdin";
 auto STDOUTPIPE = L"\\\\.\\pipe\\nvim_stdout";
-auto BUFFERSIZE = 8192;
-auto PIPE_TIMEOUT = 5000;
-
-class NamedPipe {
-  HANDLE _pipe = nullptr;
-  std::vector<uint8_t> _outbuffer;
-  std::vector<uint8_t> _inbuffer;
-
-public:
-  NamedPipe(const wchar_t *name, size_t size)
-      : _outbuffer(size), _inbuffer(size) {
-    SECURITY_ATTRIBUTES sec_attribs = {0};
-    sec_attribs.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sec_attribs.bInheritHandle = true;
-    _pipe =
-        CreateNamedPipeW(name,
-                         PIPE_ACCESS_DUPLEX |        // read/write access
-                             FILE_FLAG_OVERLAPPED,   // overlapped mode
-                         PIPE_TYPE_MESSAGE |         // message-type pipe
-                             PIPE_READMODE_MESSAGE | // message-read mode
-                             PIPE_WAIT               // blocking mode
-                         ,
-                         2, (DWORD)_outbuffer.size(), (DWORD)_inbuffer.size(),
-                         PIPE_TIMEOUT, &sec_attribs);
-    assert(_pipe != INVALID_HANDLE_VALUE);
-  }
-  // ~NamedPipe() { CloseHandle(this->_pipe); }
-  HANDLE Pipe() const { return _pipe; }
-};
+auto BUFFERSIZE = 1024;
 
 class Nvim {
-  NamedPipe _stdin_write;
-  NamedPipe _stdin_read;
-  NamedPipe _stdout_write;
-  NamedPipe _stdout_read;
+  HANDLE _stdin_read = nullptr;
+  HANDLE _stdin_write = nullptr;
+  HANDLE _stdout_read = nullptr;
+  HANDLE _stdout_write = nullptr;
   PROCESS_INFORMATION _process_info = {0};
 
-  Nvim()
-      : _stdin_write(STDINPIPE, BUFFERSIZE), _stdin_read(STDINPIPE, BUFFERSIZE),
-        _stdout_write(STDOUTPIPE, BUFFERSIZE),
-        _stdout_read(STDOUTPIPE, BUFFERSIZE) {}
+  std::wstring m_command;
+
+  Nvim(const wchar_t *command) : m_command(command) {
+    SECURITY_ATTRIBUTES sec_attribs{.nLength = sizeof(SECURITY_ATTRIBUTES),
+                                    .bInheritHandle = true};
+    CreatePipe(&this->_stdin_read, &this->_stdin_write, &sec_attribs, 0);
+    CreatePipe(&this->_stdout_read, &this->_stdout_write, &sec_attribs, 0);
+  }
 
 public:
   ~Nvim() {
@@ -59,21 +35,22 @@ public:
     }
   }
 
-  HANDLE ReadHandle() const { return _stdout_read.Pipe(); }
-  HANDLE WriteHandle() const { return _stdin_write.Pipe(); }
+  wchar_t *Command() { return m_command.data(); }
+  HANDLE ReadHandle() const { return _stdout_read; }
+  HANDLE WriteHandle() const { return _stdin_write; }
 
-  static std::shared_ptr<Nvim> Launch(std::wstring command) {
+  static std::shared_ptr<Nvim> Launch(const wchar_t *command) {
 
-    auto nvim = std::shared_ptr<Nvim>(new Nvim());
+    auto nvim = std::shared_ptr<Nvim>(new Nvim(command));
 
     STARTUPINFOW startup_info = {0};
     startup_info.cb = sizeof(STARTUPINFO);
     startup_info.dwFlags = STARTF_USESTDHANDLES;
-    startup_info.hStdInput = nvim->_stdin_read.Pipe();
-    startup_info.hStdOutput = nvim->_stdout_write.Pipe();
-    startup_info.hStdError = nvim->_stdout_write.Pipe();
+    startup_info.hStdInput = nvim->_stdin_read;
+    startup_info.hStdOutput = nvim->_stdout_write;
+    startup_info.hStdError = nvim->_stdout_write;
 
-    if (!CreateProcessW(nullptr, command.data(), nullptr, nullptr, true,
+    if (!CreateProcessW(nullptr, nvim->Command(), nullptr, nullptr, true,
                         CREATE_NO_WINDOW, nullptr, nullptr, &startup_info,
                         &nvim->_process_info)) {
       return nullptr;
@@ -99,16 +76,19 @@ int main(int argc, char **argv) {
   }
 
   asio::io_context context;
-  auto reader = asio::windows::stream_handle(context, nvim->ReadHandle());
-  auto writer = asio::windows::stream_handle(context, nvim->WriteHandle());
+  asio::io_context::work work(context);
 
   msgpack_rpc::rpc_base<msgpack_rpc::WindowsStreamTransport> rpc;
-  rpc.attach(msgpack_rpc::WindowsStreamTransport(std::move(reader),
-                                                 std::move(writer)));
+  rpc.attach(msgpack_rpc::WindowsStreamTransport(nvim->ReadHandle(),
+                                                 nvim->WriteHandle()));
 
-  auto result = rpc.call("");
+  std::thread context_thead([&context]() { context.run(); });
 
-  context.run();
+  auto result = rpc.call("nvim_get_api_info").get();
+  std::cout << msgpackpp::parser(result) << std::endl;
+
+  context.stop();
+  context_thead.join();
 
   return 0;
 }

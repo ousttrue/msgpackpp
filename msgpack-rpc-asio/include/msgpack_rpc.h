@@ -109,11 +109,31 @@ public:
 
 class SocketTransport {
   asio::ip::tcp::socket m_socket;
+  std::vector<uint8_t> m_buf;
 
 public:
-  SocketTransport(asio::ip::tcp::socket socket) : m_socket(std::move(socket)) {}
-  asio::ip::tcp::socket &Reader() { return m_socket; }
-  asio::ip::tcp::socket &Writer() { return m_socket; }
+  SocketTransport(asio::ip::tcp::socket socket)
+      : m_socket(std::move(socket)), m_buf(1024) {}
+  void read_async(
+      const std::function<void(const uint8_t *p, size_t size)> &callback) {
+    asio::async_read(m_socket, asio::buffer(m_buf), asio::transfer_at_least(1),
+                     [self = this, callback](asio::error_code ec, size_t size) {
+                       if (ec) {
+                         callback(nullptr, 0);
+                       } else {
+                         callback(self->m_buf.data(), size);
+                       }
+                     });
+  }
+  void write_async(const std::vector<uint8_t> &bytes) {
+    auto p = std::make_shared<std::vector<uint8_t>>();
+    *p = bytes;
+
+    asio::async_write(m_socket, asio::buffer(*p),
+                      [p /*keep*/](asio::error_code ec, size_t size) {
+                        //
+                      });
+  }
 };
 
 template <typename Transport>
@@ -121,8 +141,7 @@ class session : public std::enable_shared_from_this<session<Transport>> {
   Transport m_transport;
 
   // on_read
-  asio::streambuf m_buf;
-  using on_read_t = std::function<void(const std::vector<uint8_t> &)>;
+  using on_read_t = std::function<void(const uint8_t *p, size_t size)>;
   on_read_t m_on_read;
 
   error_handler_t m_error_handler;
@@ -148,47 +167,26 @@ public:
   Transport &transport() { return m_transport; }
 
 private:
-  std::vector<uint8_t> to_vector() const {
-    auto p = asio::buffer_cast<const uint8_t *>(m_buf.data());
-    return std::vector<uint8_t>(p, p + m_buf.size());
-  }
-
   void start_read() {
-    auto on_read =
-        [shared = this->shared_from_this()](const asio::error_code error,
-                                            const size_t bytes_transferred) {
-          if (error) {
-            if (shared->m_error_handler) {
-              shared->m_error_handler(error);
-            }
-            // no more read
-            return;
-          } else {
-            auto data = shared->to_vector();
-            assert(!data.empty());
-            if (shared->m_on_read) {
-              shared->m_on_read(data);
-            }
-            shared->m_buf.consume(bytes_transferred);
-
-            // read loop
-            shared->start_read();
-          }
-        };
-    async_read(m_transport.Reader(), m_buf, asio::transfer_at_least(1),
-               on_read);
+    auto on_read = [shared = this->shared_from_this()](
+                       const uint8_t *p, size_t bytes_transferred) {
+      if (!p) {
+        return;
+      } else {
+        assert(bytes_transferred);
+        if (shared->m_on_read) {
+          shared->m_on_read(p, bytes_transferred);
+        }
+        // read loop
+        shared->start_read();
+      }
+    };
+    m_transport.read_async(on_read);
   }
 
 public:
   void write_async(const std::vector<uint8_t> &buffer) {
-    auto p = std::make_shared<std::vector<uint8_t>>();
-    *p = buffer;
-    asio::async_write(
-        m_transport.Writer(), asio::buffer(*p),
-        [p /* keep write buffer */](asio::error_code ec, size_t size) {
-          //
-          auto a = 0;
-        });
+    m_transport.write_async(buffer);
   }
 };
 
@@ -304,8 +302,9 @@ public:
   void attach(Transport t) {
     // start socket read
     m_session = msgpack_rpc::session<Transport>::create(
-        std::move(t),
-        [self = this](const auto &data) mutable { self->on_receive(data); });
+        std::move(t), [self = this](const uint8_t *data, size_t size) mutable {
+          self->on_receive(data, size);
+        });
   }
 
   std::shared_ptr<session<Transport>> session() const { return m_session; }
@@ -323,8 +322,8 @@ public:
     m_handlerMap.insert(std::make_pair(method, proc));
   }
 
-  void on_receive(const msgpackpp::bytes &bytes) {
-    auto msg = msgpackpp::parser(bytes);
+  void on_receive(const uint8_t *data, size_t size) {
+    auto msg = msgpackpp::parser(data, (int)size);
     auto type = msg[0].get_number<int>();
     switch (type) {
     case 0:
