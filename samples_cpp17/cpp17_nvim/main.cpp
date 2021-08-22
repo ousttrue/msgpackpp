@@ -84,8 +84,27 @@ int main(int argc, char **argv) {
 
   std::thread context_thead([&context]() { context.run(); });
 
-  auto result = rpc.call("nvim_get_api_info").get();
-  std::cout << msgpackpp::parser(result) << std::endl;
+  {
+    auto result = rpc.request("nvim_get_api_info").get();
+    std::cout << msgpackpp::parser(result) << std::endl;
+  }
+
+  { rpc.notify("nvim_set_var", "nvy", 1); }
+
+  {
+    auto result = rpc.request("nvim_eval", "stdpath('config')").get();
+    std::cout << msgpackpp::parser(result) << std::endl;
+  }
+
+  {
+    msgpackpp::packer args;
+    args.pack_array(3);
+    args << 190;
+    args << 45;
+    args.pack_map(1);
+    args << "ext_linegrid" << true;
+    rpc.notify_raw("nvim_ui_attach", args.get_payload());
+  }
 
   context.stop();
   context_thead.join();

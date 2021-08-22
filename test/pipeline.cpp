@@ -22,9 +22,9 @@ TEST_CASE("pipeline") {
   // request
   msgpack_rpc::rpc client;
   client.attach(std::move(socket));
-  REQUIRE(msgpackpp::deserialize<int>(client.call("add", 1, 2).get()) == 3);
+  REQUIRE(msgpackpp::deserialize<int>(client.request("add", 1, 2).get()) == 3);
 
-  auto request2 = client.call("add", 3, 4);
+  auto request2 = client.request("add", 3, 4);
   request2.wait();
   int result2 = msgpackpp::deserialize<int>(request2.get());
   REQUIRE(result2 == 7);

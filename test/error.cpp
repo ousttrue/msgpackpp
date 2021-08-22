@@ -39,7 +39,7 @@ TEST_CASE("error_handling") {
 
   // no method
   {
-    auto request = client.call("no_such_method");
+    auto request = client.request("no_such_method");
     request.wait();
     // REQUIRE(request->is_error());
     // REQUIRE(request->get_error_code()==
@@ -47,14 +47,14 @@ TEST_CASE("error_handling") {
   }
   // too many arguments
   {
-    auto request = client.call("acc", 1, 2);
+    auto request = client.request("acc", 1, 2);
     request.wait();
     // REQUIRE(request->is_error());
     // REQUIRE(request->get_error_code()== msgpack_rpc::error_params_too_many);
   }
   //  not enough arguments
   {
-    auto request = client.call("add", 1);
+    auto request = client.request("add", 1);
     request.wait();
     // REQUIRE(request->is_error());
     // REQUIRE(request->get_error_code()==
@@ -62,7 +62,7 @@ TEST_CASE("error_handling") {
   }
   //   invalid argument type
   {
-    auto request = client.call("add", "a", "b");
+    auto request = client.request("add", "a", "b");
     request.wait();
     // REQUIRE(request->is_error());
     // REQUIRE(request->get_error_code()== msgpack_rpc::error_params_convert);

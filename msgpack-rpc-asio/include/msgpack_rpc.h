@@ -413,35 +413,41 @@ private:
 
 public:
   template <typename... ARGS>
-  std::future<std::vector<uint8_t>> call(const std::string &method,
-                                         ARGS... args) {
-
+  std::future<std::vector<uint8_t>> request(const std::string &method,
+                                            ARGS... args) {
     auto p = std::make_shared<std::promise<std::vector<uint8_t>>>();
     auto f = p->get_future();
 
-    auto request =
+    auto message =
         msgpackpp::make_rpc_request(m_next_msg_id++, method, args...);
-
-    send_request_async(request, p);
+    send_request_async(message, p);
 
     return f;
+  }
+
+  template <typename... ARGS>
+  void notify(const std::string &method, ARGS... args) {
+    auto message = msgpackpp::make_rpc_notify(method, args...);
+    m_session->write_async(message);
+  }
+
+  void notify_raw(const std::string &method, const msgpackpp::bytes &raw) {
+    auto message = msgpackpp::make_rpc_notify_packed(method, raw);
+    m_session->write_async(message);
   }
 
 private:
   std::vector<uint8_t> m_write_buffer;
 
   void
-  send_request_async(const msgpackpp::bytes &request,
+  send_request_async(const msgpackpp::bytes &mesage,
                      std::shared_ptr<std::promise<std::vector<uint8_t>>> p) {
-
-    auto parsed = msgpackpp::parser(request);
-
+    auto parsed = msgpackpp::parser(mesage);
     auto req = std::make_shared<func_call>(
         parsed.to_json(),
         [p](func_call *f) mutable { p->set_value(f->get_result()); });
     m_request_map.insert(std::make_pair(parsed[1].get_number<int>(), req));
-
-    m_session->write_async(request);
+    m_session->write_async(mesage);
   }
 };
 using rpc = rpc_base<SocketTransport>;
