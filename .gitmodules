@@ -3,4 +3,4 @@
 	url = https://github.com/chriskohlhoff/asio.git
 [submodule "_external/msgpackpp/msgpackpp"]
 	path = _external/msgpackpp/msgpackpp
-	url = git@github.com:ousttrue/msgpackpp.git
+	url = https://github.com/ousttrue/msgpackpp.git
