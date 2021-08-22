@@ -361,7 +361,7 @@ private:
               on_request(std::string(method.begin(), method.end()), msg[3]);
           auto response = msgpackpp::make_rpc_response_packed(id, "", result);
           write_async(response);
-        } catch (const msgerror &ex) {
+        } catch (const std::runtime_error &ex) {
           auto response =
               msgpackpp::make_rpc_response(id, ex.what(), msgpackpp::nil);
           write_async(response);
@@ -381,13 +381,8 @@ private:
           if (msg[2].is_nil() ||
               msg[2].is_string() && msg[2].get_string() == "") {
             found->second->set_result(msg[3]);
-          } else if (msg[2].is_bool()) {
-            bool isError = msg[2].get_bool();
-            if (isError) {
-              found->second->set_error(msg[3]);
-            } else {
-              found->second->set_result(msg[3]);
-            }
+          } else {
+            found->second->set_error(msg[2]);
           }
         } else {
           std::cout << msg << std::endl;
@@ -464,12 +459,18 @@ private:
                      std::shared_ptr<std::promise<std::vector<uint8_t>>> p) {
     auto parsed = msgpackpp::parser(mesage);
     auto req = std::make_shared<func_call>(
-        parsed.to_json(),
-        [p](func_call *f) mutable { p->set_value(f->get_result()); });
+        parsed.to_json(), [p](func_call *f) mutable {
+          if (f->is_error()) {
+            std::exception_ptr ep = std::current_exception();
+            p->set_exception(ep);
+          } else {
+            p->set_value(f->get_result());
+          }
+        });
     m_request_map.insert(std::make_pair(parsed[1].get_number<int>(), req));
     m_session->write_async(mesage);
   }
 };
 using rpc = rpc_base<SocketTransport>;
 
-} // namespace msgpack_rpc
+} // namespace msgpackpp
