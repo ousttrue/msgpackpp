@@ -1,3 +1,3 @@
-project(msgpack-rpc-asio)
+project(msgpackpp)
 cmake_minimum_required(VERSION 3.14)
-subdirs(_external msgpack-rpc-asio samples_cpp17 samples_cpp20 test)
+subdirs(_external msgpackpp samples_cpp17 samples_cpp20 test)

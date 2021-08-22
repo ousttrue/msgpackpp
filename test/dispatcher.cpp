@@ -1,6 +1,6 @@
 #include <catch.hpp>
 
-#include <msgpack_rpc.h>
+#include <msgpackpp/rpc.h>
 #include <thread>
 
 class Dummy {
@@ -16,7 +16,7 @@ static float zero() { return 0; }
 
 TEST_CASE("dispatcher0") {
   ::asio::io_service io_service;
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
 
   // function pointer
   dispatcher.add_handler("fp", &zero);
@@ -33,7 +33,7 @@ static bool unary(double n) { return false; }
 
 TEST_CASE("dispatcher1") {
   ::asio::io_service io_service;
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
 
   // function pointer
   dispatcher.add_handler("fp", &unary);
@@ -54,7 +54,7 @@ static int binary(int a, int b) { return a + b; }
 
 TEST_CASE("dispatcher2") {
   ::asio::io_service io_service;
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
 
   // function pointer
   dispatcher.add_handler("fp", &binary);
@@ -75,7 +75,7 @@ static int func3(int a, int b, int c) { return a + b + c; }
 
 TEST_CASE("dispatcher3") {
   ::asio::io_service io_service;
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
 
   // function pointer
   dispatcher.add_handler("fp", &func3);
@@ -98,7 +98,7 @@ static int func4(int a, int b, int c, int d) { return a + b + c + d; }
 
 TEST_CASE("dispatcher4") {
   ::asio::io_service io_service;
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
 
   // function pointer
   dispatcher.add_handler("fp", &func4);

@@ -1,5 +1,5 @@
 #include <iostream>
-#include <msgpack_rpc.h>
+#include <msgpackpp/rpc.h>
 
 #include <asio/awaitable.hpp>
 #include <asio/experimental/awaitable_operators.hpp>
@@ -9,11 +9,11 @@ const auto PORT = 8070;
 asio::awaitable<int> client(asio::io_context &context,
                             asio::ip::tcp::endpoint ep) {
 
-  // auto client = co_await msgpack_rpc::client::connect_awaitable(context, ep);
+  // auto client = co_await msgpackpp::client::connect_awaitable(context, ep);
 
   // // client
   // asio::io_context client_io;
-  // msgpack_rpc::client client(client_io);
+  // msgpackpp::client client(client_io);
   // // asio::io_context::work work(client_io);
   // std::thread client_thread([&client_io]() {
   //   client_io.run();
@@ -43,12 +43,12 @@ int main(int argc, char **argv) {
                                     PORT);
 
   // server rpc
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
   dispatcher.add_handler("add", [](int a, int b) { return a + b; });
 
   // server
   asio::io_context server_context;
-  msgpack_rpc::server server(server_context,
+  msgpackpp::server server(server_context,
                              [&dispatcher](asio::ip::tcp::socket socket) {
                                dispatcher.attach(std::move(socket));
                              });

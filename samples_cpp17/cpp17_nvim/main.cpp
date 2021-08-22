@@ -1,6 +1,6 @@
 #include <iostream>
-#include <msgpack_rpc.h>
-#include <windows_pipe_transport.h>
+#include <msgpackpp/rpc.h>
+#include <msgpackpp/windows_pipe_transport.h>
 
 auto STDINPIPE = L"\\\\.\\pipe\\nvim_stdin";
 auto STDOUTPIPE = L"\\\\.\\pipe\\nvim_stdout";
@@ -78,8 +78,8 @@ int main(int argc, char **argv) {
   asio::io_context context;
   asio::io_context::work work(context);
 
-  msgpack_rpc::rpc_base<msgpack_rpc::WindowsPipeTransport> rpc;
-  rpc.attach(msgpack_rpc::WindowsPipeTransport(context, nvim->ReadHandle(),
+  msgpackpp::rpc_base<msgpackpp::WindowsPipeTransport> rpc;
+  rpc.attach(msgpackpp::WindowsPipeTransport(context, nvim->ReadHandle(),
                                                nvim->WriteHandle()));
 
   std::thread context_thead([&context]() { context.run(); });

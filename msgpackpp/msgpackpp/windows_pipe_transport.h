@@ -1,7 +1,7 @@
 #pragma once
 #include <Windows.h>
 
-namespace msgpack_rpc {
+namespace msgpackpp {
 
 class WindowsPipeTransport {
   asio::io_context &m_context;

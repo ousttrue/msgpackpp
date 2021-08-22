@@ -1,12 +1,12 @@
 #pragma once
 #include <iostream>
-#include <msgpack_rpc.h>
+#include <msgpackpp/rpc.h>
 
 struct Fixture {
-  msgpack_rpc::rpc dispatcher;
+  msgpackpp::rpc dispatcher;
 
   asio::io_service server_io;
-  msgpack_rpc::server server;
+  msgpackpp::server server;
   std::shared_ptr<std::thread> server_thread;
   std::mutex m_mutex;
 

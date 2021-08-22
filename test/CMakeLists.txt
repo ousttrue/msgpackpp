@@ -7,4 +7,4 @@ add_executable(
   error.cpp
   pipeline.cpp
 )
-target_link_libraries(test PRIVATE catch msgpack-rpc-asio)
+target_link_libraries(test PRIVATE catch msgpackpp asio)

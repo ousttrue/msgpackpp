@@ -1,14 +1,14 @@
 #pragma once
+#include "msgpackpp.h"
 #include <asio.hpp>
 #include <asio/detached.hpp>
 #include <asio/streambuf.hpp>
 #include <asio/write.hpp>
 #include <functional>
 #include <memory>
-#include <msgpackpp.h>
 #include <unordered_map>
 
-namespace msgpack_rpc {
+namespace msgpackpp {
 
 using on_read_t = std::function<void(const uint8_t *p, size_t size)>;
 
@@ -295,7 +295,7 @@ public:
 
   void attach(Transport t) {
     // start socket read
-    m_session = msgpack_rpc::session<Transport>::create(
+    m_session = msgpackpp::session<Transport>::create(
         std::move(t), [self = this](const uint8_t *data, size_t size) mutable {
           self->on_receive(data, size);
         });
