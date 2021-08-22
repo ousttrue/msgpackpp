@@ -1,4 +1,4 @@
-set(TARGET_NAME pingpong)
+set(TARGET_NAME cpp20_pingpong)
 add_executable(${TARGET_NAME} main.cpp)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 20)
 target_compile_options(${TARGET_NAME} PUBLIC $<$<C_COMPILER_ID:MSVC>:/await>)
