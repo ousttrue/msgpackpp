@@ -13,7 +13,7 @@
 * `c++17` header only msgpack-rpc implementation.
 * depends on [asio header only](http://think-async.com/Asio/index.html)
 
-# msgpackpp/windows_pipe_transport.h
+## msgpackpp/windows_pipe_transport.h
 
 * Windows PIPE transport for `nvim --embed`
 * depends on Windows.h
