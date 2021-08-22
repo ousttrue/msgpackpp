@@ -3,14 +3,14 @@
 
 namespace msgpack_rpc {
 
-class WindowsStreamTransport {
+class WindowsPipeTransport {
   asio::io_context &m_context;
   HANDLE m_reader;
   HANDLE m_writer;
   std::thread m_thread;
 
 public:
-  WindowsStreamTransport(WindowsStreamTransport &&rhs)
+  WindowsPipeTransport(WindowsPipeTransport &&rhs)
       : m_context(rhs.m_context) {
     m_reader = rhs.m_reader;
     rhs.m_reader = nullptr;
@@ -19,17 +19,11 @@ public:
     m_thread = std::move(rhs.m_thread);
     rhs.m_thread = {};
   }
-  WindowsStreamTransport(asio::io_context &context, HANDLE reader,
+  WindowsPipeTransport(asio::io_context &context, HANDLE reader,
                          HANDLE writer)
       : m_context(context), m_reader(reader), m_writer(writer) {}
 
-  ~WindowsStreamTransport() {
-    if (m_reader) {
-      CloseHandle(m_reader);
-    }
-    if (m_writer) {
-      CloseHandle(m_writer);
-    }
+  ~WindowsPipeTransport() {
     if (m_thread.joinable()) {
       CancelSynchronousIo(m_thread.native_handle());
       m_thread.join();
