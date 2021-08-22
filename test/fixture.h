@@ -25,16 +25,16 @@ struct Fixture {
         });
 
     auto &mutex = m_mutex;
-    auto error_handler = [&mutex](asio::error_code error) {
-      if (error == asio::error::connection_reset) {
-        // closed
-        return;
-      }
-      std::lock_guard<std::mutex> lock(mutex);
-      auto msg = error.message();
-      std::cerr << msg << std::endl;
-    };
-    server.set_error_handler(error_handler);
+    // auto error_handler = [&mutex](asio::error_code error) {
+    //   if (error == asio::error::connection_reset) {
+    //     // closed
+    //     return;
+    //   }
+    //   std::lock_guard<std::mutex> lock(mutex);
+    //   auto msg = error.message();
+    //   std::cerr << msg << std::endl;
+    // };
+    // server.set_error_handler(error_handler);
 
     server.listen(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
     server_thread = std::make_shared<std::thread>([&] { server_io.run(); });
