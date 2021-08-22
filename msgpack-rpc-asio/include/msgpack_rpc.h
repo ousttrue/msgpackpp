@@ -10,8 +10,7 @@
 
 namespace msgpack_rpc {
 
-using on_accepted_t = std::function<void(asio::ip::tcp::socket)>;
-using error_handler_t = std::function<void(asio::error_code error)>;
+using on_read_t = std::function<void(const uint8_t *p, size_t size)>;
 
 inline std::future<void> connect_async(asio::ip::tcp::socket &socket,
                                        const asio::ip::tcp::endpoint &ep) {
@@ -28,8 +27,8 @@ class server {
   ::asio::io_service &m_io_service;
   ::asio::ip::tcp::acceptor m_acceptor;
 
+  using on_accepted_t = std::function<void(asio::ip::tcp::socket)>;
   on_accepted_t m_on_accepted;
-  error_handler_t m_error_handler;
 
 public:
   server(::asio::io_service &io_service)
@@ -39,19 +38,10 @@ public:
       : m_io_service(io_service), m_acceptor(io_service),
         m_on_accepted(on_accepted) {}
 
-  server(::asio::io_service &io_service, on_accepted_t on_accepted,
-         error_handler_t error_handler)
-      : m_io_service(io_service), m_acceptor(io_service),
-        m_on_accepted(on_accepted), m_error_handler(error_handler) {}
-
   ~server() {}
 
   void set_on_accepted(on_accepted_t on_accepted) {
     m_on_accepted = on_accepted;
-  }
-
-  void set_error_handler(error_handler_t error_handler) {
-    m_error_handler = error_handler;
   }
 
   void listen(::asio::ip::tcp::endpoint endpoint) {
@@ -68,11 +58,7 @@ private:
     auto on_accept = [self = this](const ::asio::error_code &error,
                                    asio::ip::tcp::socket socket) {
       if (error) {
-        if (self->m_error_handler) {
-          self->m_error_handler(error);
-        } else {
-          throw error;
-        }
+        throw error;
       } else {
         if (!self->m_on_accepted) {
           throw std::runtime_error("m_on_accepted");
@@ -85,30 +71,6 @@ private:
     m_acceptor.async_accept(on_accept);
   }
 };
-
-enum class error_code {
-  success,
-  error_dispatcher_no_handler,
-  error_params_not_array,
-  error_params_too_many,
-  error_params_not_enough,
-  error_params_convert,
-  error_not_implemented,
-  error_self_pointer_is_null,
-  no_request_for_response,
-  invalid_rpc,
-};
-
-struct msgerror : std::runtime_error {
-  error_code code;
-
-public:
-  msgerror(error_code code, const std::string &msg = "")
-      : std::runtime_error(msg), code(code) {}
-};
-
-// on_read
-using on_read_t = std::function<void(const uint8_t *p, size_t size)>;
 
 class SocketTransport {
   asio::ip::tcp::socket m_socket;
@@ -162,21 +124,15 @@ template <typename Transport>
 class session : public std::enable_shared_from_this<session<Transport>> {
   Transport m_transport;
 
-  error_handler_t m_error_handler;
-
   // force shard_ptr
-  session(Transport transport, error_handler_t error_handler)
-      : m_transport(std::move(transport)), m_error_handler(error_handler) {}
+  session(Transport transport) : m_transport(std::move(transport)) {}
 
 public:
   ~session() {}
 
   template <typename T>
-  static std::shared_ptr<session<T>>
-  create(T t, on_read_t func = on_read_t(),
-         error_handler_t error_handler = error_handler_t()) {
-    auto s = std::shared_ptr<session<T>>(
-        new session<T>(std::move(t), error_handler));
+  static std::shared_ptr<session<T>> create(T t, on_read_t func = on_read_t()) {
+    auto s = std::shared_ptr<session<T>>(new session<T>(std::move(t)));
     s->m_transport.start_read(func);
     return s;
   }
@@ -291,6 +247,25 @@ inline std::ostream &operator<<(std::ostream &os, const func_call &request) {
   return os;
 }
 
+enum class error_code {
+  success,
+  error_dispatcher_no_handler,
+  error_params_not_array,
+  error_params_too_many,
+  error_params_not_enough,
+  error_params_convert,
+  error_not_implemented,
+  error_self_pointer_is_null,
+  no_request_for_response,
+  invalid_rpc,
+};
+struct msgerror : std::runtime_error {
+  error_code code;
+
+public:
+  msgerror(error_code code, const std::string &msg = "")
+      : std::runtime_error(msg), code(code) {}
+};
 template <typename Transport> class rpc_base {
   std::shared_ptr<session<Transport>> m_session;
 
@@ -302,7 +277,22 @@ template <typename Transport> class rpc_base {
   std::vector<uint8_t> m_read_buffer;
   std::unordered_map<int, std::shared_ptr<func_call>> m_request_map;
 
+  using on_error_t = std::function<void(error_code error)>;
+  on_error_t m_on_error = [](error_code) {};
+
+  using on_send_t = std::function<void(const std::vector<uint8_t> &data)>;
+  on_send_t m_on_send = [](const std::vector<uint8_t> &data) {};
+
+  using on_msg_t = std::function<void(const msgpackpp::parser &msg)>;
+  on_msg_t m_on_msg = [](const msgpackpp::parser &msg) {};
+
 public:
+  void set_on_error(const on_error_t &on_error) { m_on_error = on_error; }
+
+  void set_on_send(const on_send_t &on_send) { m_on_send = on_send; }
+
+  void set_on_msg(const on_msg_t &on_msg) { m_on_msg = on_msg; }
+
   void attach(Transport t) {
     // start socket read
     m_session = msgpack_rpc::session<Transport>::create(
@@ -336,9 +326,16 @@ public:
         auto current = msg;
         msg = msg.next();
         on_message(current);
-      } catch (const std::runtime_error &) {
-        // end
+      } catch (const msgpackpp::empty_parse_error &) {
+        // next
         break;
+      } catch (const msgpackpp::lack_parse_error &) {
+        // next
+        break;
+      } catch (const msgpackpp::parse_error &e) {
+        // cannot continue
+        std::cerr << e.what() << std::endl;
+        throw e;
       }
     }
     auto d = msg.data() - m_read_buffer.data();
@@ -349,6 +346,8 @@ public:
 
 private:
   void on_message(const msgpackpp::parser &msg) {
+    m_on_msg(msg);
+
     auto type = msg[0].get_number<int>();
     switch (type) {
     case 0:
@@ -361,38 +360,56 @@ private:
           auto result =
               on_request(std::string(method.begin(), method.end()), msg[3]);
           auto response = msgpackpp::make_rpc_response_packed(id, "", result);
-          m_session->write_async(response);
+          write_async(response);
         } catch (const msgerror &ex) {
           auto response =
               msgpackpp::make_rpc_response(id, ex.what(), msgpackpp::nil);
-          m_session->write_async(response);
+          write_async(response);
         }
       }
       break;
 
     case 1: {
-      // response
+      // response [1, id, error, result]
       auto id = msg[1].get_number<int>();
-      auto found = m_request_map.find(id);
-      if (found != m_request_map.end()) {
-        if (msg[2].is_nil() ||
-            msg[2].is_string() && msg[2].get_string() == "") {
-          found->second->set_result(msg[3]);
-        } else if (msg[2].is_bool()) {
-          bool isError = msg[2].get_bool();
-          if (isError) {
-            found->second->set_error(msg[3]);
-          } else {
-            found->second->set_result(msg[3]);
-          }
-        }
+      if (id == 0) {
+        // error message
+        auto a = 0;
       } else {
-        throw msgerror(error_code::no_request_for_response);
+        auto found = m_request_map.find(id);
+        if (found != m_request_map.end()) {
+          if (msg[2].is_nil() ||
+              msg[2].is_string() && msg[2].get_string() == "") {
+            found->second->set_result(msg[3]);
+          } else if (msg[2].is_bool()) {
+            bool isError = msg[2].get_bool();
+            if (isError) {
+              found->second->set_error(msg[3]);
+            } else {
+              found->second->set_result(msg[3]);
+            }
+          }
+        } else {
+          std::cout << msg << std::endl;
+          m_on_error(error_code::no_request_for_response);
+        }
       }
     } break;
 
     case 2:
-      throw msgerror(error_code::error_not_implemented);
+      // response [2, method, args]
+      try {
+        auto method = msg[1].get_string();
+        // execute callback. no return value
+        on_request(std::string(method.begin(), method.end()), msg[3]);
+      } catch (const msgerror &) {
+        auto a = 0;
+        // auto response =
+        //     msgpackpp::make_rpc_response(id, ex.what(), msgpackpp::nil);
+        // m_session->write_async(response);
+        // TODO: error notify ?
+      }
+      break;
 
     default:
       throw msgerror(error_code::invalid_rpc);
@@ -428,16 +445,19 @@ public:
   template <typename... ARGS>
   void notify(const std::string &method, ARGS... args) {
     auto message = msgpackpp::make_rpc_notify(method, args...);
-    m_session->write_async(message);
+    write_async(message);
   }
 
   void notify_raw(const std::string &method, const msgpackpp::bytes &raw) {
     auto message = msgpackpp::make_rpc_notify_packed(method, raw);
-    m_session->write_async(message);
+    write_async(message);
   }
 
 private:
-  std::vector<uint8_t> m_write_buffer;
+  void write_async(const std::vector<uint8_t> &data) {
+    m_on_send(data);
+    m_session->write_async(data);
+  }
 
   void
   send_request_async(const msgpackpp::bytes &mesage,
