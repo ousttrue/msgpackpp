@@ -28,8 +28,6 @@ public:
     DWORD exit_code;
     GetExitCodeProcess(_process_info.hProcess, &exit_code);
     if (exit_code == STILL_ACTIVE) {
-      CloseHandle(ReadHandle());
-      CloseHandle(WriteHandle());
       TerminateProcess(this->_process_info.hProcess, 0);
       CloseHandle(this->_process_info.hProcess);
     }
@@ -79,7 +77,7 @@ int main(int argc, char **argv) {
   asio::io_context::work work(context);
 
   msgpack_rpc::rpc_base<msgpack_rpc::WindowsStreamTransport> rpc;
-  rpc.attach(msgpack_rpc::WindowsStreamTransport(nvim->ReadHandle(),
+  rpc.attach(msgpack_rpc::WindowsStreamTransport(context, nvim->ReadHandle(),
                                                  nvim->WriteHandle()));
 
   std::thread context_thead([&context]() { context.run(); });

@@ -4,16 +4,42 @@
 namespace msgpack_rpc {
 
 class WindowsStreamTransport {
+  asio::io_context &m_context;
   HANDLE m_reader;
   HANDLE m_writer;
   std::thread m_thread;
 
 public:
-  WindowsStreamTransport(HANDLE reader, HANDLE writer)
-      : m_reader(reader), m_writer(writer) {}
+  WindowsStreamTransport(WindowsStreamTransport &&rhs)
+      : m_context(rhs.m_context) {
+    m_reader = rhs.m_reader;
+    rhs.m_reader = nullptr;
+    m_writer = rhs.m_writer;
+    rhs.m_writer = nullptr;
+    m_thread = std::move(rhs.m_thread);
+    rhs.m_thread = {};
+  }
+  WindowsStreamTransport(asio::io_context &context, HANDLE reader,
+                         HANDLE writer)
+      : m_context(context), m_reader(reader), m_writer(writer) {}
 
-  void read_async(
+  ~WindowsStreamTransport() {
+    if (m_reader) {
+      CloseHandle(m_reader);
+    }
+    if (m_writer) {
+      CloseHandle(m_writer);
+    }
+    if (m_thread.joinable()) {
+      CancelSynchronousIo(m_thread.native_handle());
+      m_thread.join();
+    }
+  }
+
+  void start_read(
       const std::function<void(const uint8_t *p, size_t size)> &callback) {
+
+    assert(!m_thread.joinable());
 
     m_thread = std::thread([self = this, callback]() {
       char buf[1024];
@@ -22,10 +48,15 @@ public:
         BOOL success =
             ReadFile(self->m_reader, buf, static_cast<DWORD>(sizeof(buf)),
                      &bytes_read, nullptr);
-        if (success) {
-          callback((const uint8_t *)buf, bytes_read);
+        if (success && bytes_read) {
+          // execute on asio_context
+          auto copy = std::vector<uint8_t>(buf, buf + bytes_read);
+          self->m_context.post(
+              [callback, copy]() { callback(copy.data(), copy.size()); });
         } else {
-          callback(nullptr, 0);
+          // execute on asio_context
+          self->m_context.post([callback]() { callback(nullptr, 0); });
+          break;
         }
       }
     });
