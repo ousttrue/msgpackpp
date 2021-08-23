@@ -1638,18 +1638,27 @@ public:
     return value;
   }
 
-  bool is_nil() const {
+  bool is_nil() const noexcept {
     auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
     return type == pack_type::NIL;
   }
 
-  bool is_bool() const {
+  bool is_bool() const noexcept {
     auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
     return type == pack_type::True || type == pack_type::False;
   }
 
-  bool is_number() const {
+  bool is_number() const noexcept {
     auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
     switch (type) {
 #pragma region POSITIVE_FIXNUM 0x00 - 0x7F
     case POSITIVE_FIXNUM:
@@ -1840,8 +1849,11 @@ public:
     return false;
   }
 
-  bool is_binary() const {
+  bool is_binary() const noexcept {
     auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
     switch (type) {
     case pack_type::BIN8:
     case pack_type::BIN16:
@@ -1852,89 +1864,60 @@ public:
     return false;
   }
 
-  bool is_string() const {
+  bool is_string() const noexcept {
     auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
     switch (type) {
     case pack_type::STR32:
-      return true;
     case pack_type::STR16:
-      return true;
     case pack_type::STR8:
-      return true;
     case pack_type::FIX_STR:
-      return true;
     case pack_type::FIX_STR_0x01:
-      return true;
     case pack_type::FIX_STR_0x02:
-      return true;
     case pack_type::FIX_STR_0x03:
-      return true;
     case pack_type::FIX_STR_0x04:
-      return true;
     case pack_type::FIX_STR_0x05:
-      return true;
     case pack_type::FIX_STR_0x06:
-      return true;
     case pack_type::FIX_STR_0x07:
-      return true;
     case pack_type::FIX_STR_0x08:
-      return true;
     case pack_type::FIX_STR_0x09:
-      return true;
     case pack_type::FIX_STR_0x0A:
-      return true;
     case pack_type::FIX_STR_0x0B:
-      return true;
     case pack_type::FIX_STR_0x0C:
-      return true;
     case pack_type::FIX_STR_0x0D:
-      return true;
     case pack_type::FIX_STR_0x0E:
-      return true;
     case pack_type::FIX_STR_0x0F:
-      return true;
     case pack_type::FIX_STR_0x10:
-      return true;
     case pack_type::FIX_STR_0x11:
-      return true;
     case pack_type::FIX_STR_0x12:
-      return true;
     case pack_type::FIX_STR_0x13:
-      return true;
     case pack_type::FIX_STR_0x14:
-      return true;
     case pack_type::FIX_STR_0x15:
-      return true;
     case pack_type::FIX_STR_0x16:
-      return true;
     case pack_type::FIX_STR_0x17:
-      return true;
     case pack_type::FIX_STR_0x18:
-      return true;
     case pack_type::FIX_STR_0x19:
-      return true;
     case pack_type::FIX_STR_0x1A:
-      return true;
     case pack_type::FIX_STR_0x1B:
-      return true;
     case pack_type::FIX_STR_0x1C:
-      return true;
     case pack_type::FIX_STR_0x1D:
-      return true;
     case pack_type::FIX_STR_0x1E:
-      return true;
     case pack_type::FIX_STR_0x1F:
       return true;
     }
 
     return false;
   }
-
 #pragma endregion
 
 #pragma region array or map
-  bool is_array() const {
+  bool is_array() const noexcept {
     auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
     switch (type) {
     case pack_type::FIX_ARRAY:
     case pack_type::FIX_ARRAY_0x1:
@@ -1960,8 +1943,11 @@ public:
     return false;
   }
 
-  bool is_map() const {
+  bool is_map() const noexcept {
     auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
     switch (type) {
     case pack_type::FIX_MAP:
     case pack_type::FIX_MAP_0x1:
