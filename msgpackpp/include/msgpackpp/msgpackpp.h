@@ -1097,6 +1097,8 @@ public:
     }
   }
 
+  bool is_emtpy() const { return m_size == 0; }
+
   const uint8_t *data() const noexcept { return m_p; }
 
   int consumed_size() const {
@@ -1115,7 +1117,7 @@ public:
     return ss.str();
   }
 
-  void to_json(std::ostream &os) const {
+  void to_json(std::ostream &os) const noexcept(false) {
     if (is_array()) {
 
       os << '[';
@@ -1182,7 +1184,12 @@ public:
         auto type = header();
         auto body = body_index_and_size::from_type(type).value;
         os << "[bin:" << body.size(m_p, m_size).value << "bytes]";
+      } else if (is_ext()) {
+        auto type = header();
+        auto body = body_index_and_size::from_type(type).value;
+        os << "[ext:" << body.size(m_p, m_size).value << "bytes]";
       } else {
+        auto type = header();
         throw invalid_parse_error();
       }
     }
@@ -1864,6 +1871,26 @@ public:
     return false;
   }
 
+  bool is_ext() const noexcept {
+    auto type = header();
+    if (!type.is_ok()) {
+      return false;
+    }
+    switch (type) {
+    case pack_type::FIX_EXT_1:
+    case pack_type::FIX_EXT_2:
+    case pack_type::FIX_EXT_4:
+    case pack_type::FIX_EXT_8:
+    case pack_type::FIX_EXT_16:
+    case pack_type::EXT8:
+    case pack_type::EXT16:
+    case pack_type::EXT32:
+      return true;
+    }
+
+    return false;
+  }
+
   bool is_string() const noexcept {
     auto type = header();
     if (!type.is_ok()) {
@@ -2101,6 +2128,9 @@ public:
 
     if (is_array()) {
       auto offset = body.index;
+      if (offset > m_size) {
+        return {parse_status::lack};
+      }
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
       if (!item_count.is_ok()) {
@@ -2116,6 +2146,9 @@ public:
       return OK(current);
     } else if (is_map()) {
       auto offset = body.index;
+      if (offset > m_size) {
+        return {parse_status::lack};
+      }
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
       if (!item_count.is_ok()) {
