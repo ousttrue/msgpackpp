@@ -304,6 +304,11 @@ public:
   std::shared_ptr<session<Transport>> session() const { return m_session; }
 
 public:
+  void add_proc(const std::string &method,
+                   const msgpackpp::procedurecall &proc) {
+    m_handlerMap.insert(std::make_pair(method, proc));
+  }
+
   template <typename F>
   void add_handler(const std::string &method, const F &f) {
     auto proc = msgpackpp::make_procedurecall(f);
@@ -401,7 +406,7 @@ private:
       try {
         auto method = msg[1].get_string();
         // execute callback. no return value
-        on_request(std::string(method.begin(), method.end()), msg[3]);
+        on_request(std::string(method.begin(), method.end()), msg[2]);
       } catch (const msgerror &) {
         auto a = 0;
         // auto response =
@@ -420,12 +425,12 @@ private:
   msgpackpp::bytes on_request(const std::string &method_name,
                               const msgpackpp::parser &params) {
     auto found = m_handlerMap.find(method_name);
-    if (found == m_handlerMap.end()) {
-      throw msgerror(error_code::error_dispatcher_no_handler);
-    } else {
+    if (found != m_handlerMap.end()) {
       auto func = found->second;
       return func(params);
     }
+
+    throw msgerror(error_code::error_dispatcher_no_handler);
   }
 
 public:
