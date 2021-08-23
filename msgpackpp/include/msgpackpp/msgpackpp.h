@@ -1103,7 +1103,7 @@ public:
   const uint8_t *data() const { return m_p; }
 
   int consumed_size() const {
-    auto n = next();
+    auto n = next().value;
     return n.m_p - m_p;
   }
 
@@ -2045,14 +2045,14 @@ public:
     throw std::runtime_error("key not found");
   }
 
-  parser next() const {
+  parse_result<parser> next() const {
     if (m_size < 1) {
-      throw empty_parse_error();
+      return {parse_status::empty};
     }
     auto type = static_cast<pack_type>(m_p[0]);
     auto _body = body_index_and_size::from_type(type);
     if (!_body.is_ok()) {
-      throw invalid_parse_error();
+      return {parse_status::invalid};
     }
     auto body = _body.value;
 
@@ -2060,28 +2060,47 @@ public:
       auto offset = body.index;
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
-      for (uint8_t i = 0; i < item_count; ++i) {
-        current = current.next();
+      if (!item_count.is_ok()) {
+        return {item_count.status};
       }
-      return current;
+      for (uint8_t i = 0; i < item_count; ++i) {
+        auto _current = current.next();
+        if (!_current.is_ok()) {
+          return {_current.status};
+        }
+        current = _current.value;
+      }
+      return OK(current);
     } else if (is_map()) {
       auto offset = body.index;
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
+      if (!item_count.is_ok()) {
+        return {item_count.status};
+      }
       for (uint8_t i = 0; i < item_count; ++i) {
-        current = current.next();
-        current = current.next();
+        // k
+        auto _key = current.next();
+        if (!_key.is_ok()) {
+          return {_key.status};
+        }
+        current = _key.value;
+        // v
+        auto _value = current.next();
+        if (!_value.is_ok()) {
+          return {_value.status};
+        }
+        current = _value.value;
       }
-      return current;
+      return OK(current);
     } else {
-      auto _size = body.size(m_p, m_size);
-      if (!_size.is_ok()) {
-        throw invalid_parse_error();
+      auto size = body.size(m_p, m_size);
+      if (!size.is_ok()) {
+        return {parse_status::invalid};
       }
-      auto size = _size.value;
       auto offset = body.index + size;
       auto current = parser(m_p + offset, m_size - offset);
-      return current;
+      return OK(current);
     }
   }
 #pragma endregion
@@ -2517,7 +2536,7 @@ decltype(auto) procedure_call(F f, AS... args) {
 #define MPPP_UNPACK_KV_BEGIN()                                                 \
   auto count = u.count();                                                      \
   auto uu = u[0];                                                              \
-  for (uint8_t i = 0; i < count; ++i) {                                            \
+  for (uint8_t i = 0; i < count; ++i) {                                        \
     std::string key;                                                           \
     uu >> key;                                                                 \
     uu = uu.next();                                                            \

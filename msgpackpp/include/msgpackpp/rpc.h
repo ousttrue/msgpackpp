@@ -322,20 +322,25 @@ public:
     auto msg =
         msgpackpp::parser(m_read_buffer.data(), (int)m_read_buffer.size());
     while (true) {
+      auto current = msg;
       try {
-        auto current = msg;
-        msg = msg.next();
-        on_message(current);
-      } catch (const msgpackpp::empty_parse_error &) {
-        // next
-        break;
-      } catch (const msgpackpp::lack_parse_error &) {
-        // next
-        break;
-      } catch (const msgpackpp::parse_error &e) {
-        // cannot continue
+        auto _msg = msg.next();
+        if (_msg.is_ok()) {
+          msg = _msg;
+          on_message(current);
+        } else {
+          if (_msg.status == parse_status::empty ||
+              _msg.status == parse_status::lack) {
+            // next
+            break;
+          } else {
+            std::cerr << "parse error" << std::endl;
+            throw std::runtime_error("parse error");
+          }
+        }
+      } catch (const std::runtime_error &e) {
         std::cerr << e.what() << std::endl;
-        throw e;
+        throw;
       }
     }
     auto d = msg.data() - m_read_buffer.data();
