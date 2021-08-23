@@ -23,14 +23,14 @@ TEST_CASE("client") {
   // request
   msgpackpp::rpc client;
   client.attach(std::move(socket));
-  REQUIRE(msgpackpp::deserialize<int>(client.request("add", 1, 2).get()) == 3);
+  REQUIRE(msgpackpp::deserialize<int>(client.request_async("add", 1, 2).get()) == 3);
 
-  auto request2 = client.request("add", 3, 4);
+  auto request2 = client.request_async("add", 3, 4);
   request2.wait();
   int result2 = msgpackpp::deserialize<int>(request2.get());
   REQUIRE(result2 == 7);
 
-  auto request3 = client.request("add", 5, 6);
+  auto request3 = client.request_async("add", 5, 6);
   request3.wait();
   int result3 = msgpackpp::deserialize<int>(request3.get());
   REQUIRE(result3 == 11);

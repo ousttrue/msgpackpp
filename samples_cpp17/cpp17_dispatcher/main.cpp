@@ -18,7 +18,7 @@ int client(asio::io_context &context, asio::ip::tcp::endpoint ep) {
   // client
   msgpackpp::rpc client;
   client.attach(std::move(socket));
-  auto result = client.request("add", 1, 2).get();
+  auto result = client.request_async("add", 1, 2).get();
 
   // stop
   context.stop();

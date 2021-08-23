@@ -2098,7 +2098,7 @@ public:
     if (!type.is_ok()) {
       return {type.status};
     }
-    if (!is_array()) {
+    if (!is_array() && !is_map()) {
       return {parse_status::type};
     }
     if (count() == 0) {

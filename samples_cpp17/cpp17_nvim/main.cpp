@@ -93,14 +93,14 @@ int main(int argc, char **argv) {
                                              nvim->WriteHandle()));
 
   {
-    auto result = rpc.request("nvim_get_api_info").get();
+    auto result = rpc.request_async("nvim_get_api_info").get();
     std::cout << msgpackpp::parser(result) << std::endl;
   }
 
   { rpc.notify("nvim_set_var", "nvy", 1); }
 
   {
-    auto result = rpc.request("nvim_eval", "stdpath('config')").get();
+    auto result = rpc.request_async("nvim_eval", "stdpath('config')").get();
     std::cout << msgpackpp::parser(result) << std::endl;
   }
 
