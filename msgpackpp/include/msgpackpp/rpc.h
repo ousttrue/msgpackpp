@@ -473,7 +473,7 @@ private:
           }
         });
     m_request_map.insert(std::make_pair(parsed[1].get_number<int>(), req));
-    m_session->write_async(mesage);
+    write_async(mesage);
   }
 };
 using rpc = rpc_base<SocketTransport>;

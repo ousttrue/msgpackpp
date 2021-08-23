@@ -2099,6 +2099,9 @@ public:
         return {parse_status::invalid};
       }
       auto offset = body.index + size;
+      if (offset > m_size) {
+        return {parse_status::lack};
+      }
       auto current = parser(m_p + offset, m_size - offset);
       return OK(current);
     }

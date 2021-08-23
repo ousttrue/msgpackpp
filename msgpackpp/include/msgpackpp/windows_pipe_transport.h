@@ -10,8 +10,7 @@ class WindowsPipeTransport {
   std::thread m_thread;
 
 public:
-  WindowsPipeTransport(WindowsPipeTransport &&rhs)
-      : m_context(rhs.m_context) {
+  WindowsPipeTransport(WindowsPipeTransport &&rhs) : m_context(rhs.m_context) {
     m_reader = rhs.m_reader;
     rhs.m_reader = nullptr;
     m_writer = rhs.m_writer;
@@ -19,8 +18,7 @@ public:
     m_thread = std::move(rhs.m_thread);
     rhs.m_thread = {};
   }
-  WindowsPipeTransport(asio::io_context &context, HANDLE reader,
-                         HANDLE writer)
+  WindowsPipeTransport(asio::io_context &context, HANDLE reader, HANDLE writer)
       : m_context(context), m_reader(reader), m_writer(writer) {}
 
   ~WindowsPipeTransport() {
@@ -61,7 +59,11 @@ public:
     BOOL success =
         WriteFile(m_writer, bytes.data(), static_cast<DWORD>(bytes.size()),
                   &bytes_write, nullptr);
+    if (!success) {
+      auto error = GetLastError();
+      std::cerr << "error: WriteFile : " << error << std::endl;
+    }
   }
 };
 
-} // namespace msgpack_rpc
+} // namespace msgpackpp

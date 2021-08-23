@@ -2,10 +2,6 @@
 #include <msgpackpp/rpc.h>
 #include <msgpackpp/windows_pipe_transport.h>
 
-auto STDINPIPE = L"\\\\.\\pipe\\nvim_stdin";
-auto STDOUTPIPE = L"\\\\.\\pipe\\nvim_stdout";
-auto BUFFERSIZE = 1024;
-
 class Nvim {
   HANDLE _stdin_read = nullptr;
   HANDLE _stdin_write = nullptr;
@@ -16,7 +12,7 @@ class Nvim {
   std::wstring m_command;
 
   Nvim(const wchar_t *command) : m_command(command) {
-    SECURITY_ATTRIBUTES sec_attribs;
+    SECURITY_ATTRIBUTES sec_attribs = {0};
     sec_attribs.nLength = sizeof(SECURITY_ATTRIBUTES);
     sec_attribs.bInheritHandle = true;
     CreatePipe(&this->_stdin_read, &this->_stdin_write, &sec_attribs, 0);
@@ -43,6 +39,9 @@ public:
   static std::shared_ptr<Nvim> Launch(const wchar_t *command) {
 
     auto nvim = std::shared_ptr<Nvim>(new Nvim(command));
+    if (nvim->_stdin_write == INVALID_HANDLE_VALUE) {
+      return nullptr;
+    }
 
     STARTUPINFOW startup_info = {0};
     startup_info.cb = sizeof(STARTUPINFO);
@@ -78,12 +77,20 @@ int main(int argc, char **argv) {
 
   asio::io_context context;
   asio::io_context::work work(context);
+  std::thread context_thead([&context]() { context.run(); });
 
   msgpackpp::rpc_base<msgpackpp::WindowsPipeTransport> rpc;
+
+  rpc.set_on_msg([](auto p) {
+    //
+    std::cout << p << std::endl;
+  });
+  rpc.set_on_send([](const std::vector<uint8_t> &p) {
+    std::cout << msgpackpp::parser(p) << std::endl;
+  });
+
   rpc.attach(msgpackpp::WindowsPipeTransport(context, nvim->ReadHandle(),
                                              nvim->WriteHandle()));
-
-  std::thread context_thead([&context]() { context.run(); });
 
   {
     auto result = rpc.request("nvim_get_api_info").get();

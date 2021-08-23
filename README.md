@@ -24,7 +24,7 @@
 * [x] merge `msgpackpp` submodule. rename `msgpack-rpc-asio` to `msgpackpp`
 * [ ] `c++20` co_await
 * [ ] error handling
-* [ ] no throw API
+* [x] no throw API
 * [ ] use `std::span`. (using std::string_view)
 * [x] merge body_index & body_size
 
