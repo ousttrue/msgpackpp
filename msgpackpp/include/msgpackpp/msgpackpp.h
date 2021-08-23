@@ -386,7 +386,7 @@ enum pack_type : std::uint8_t {
 };
 
 inline uint32_t no_size_parse_error(const uint8_t *, int) {
-  throw invalid_parse_error;
+  throw invalid_parse_error();
 }
 
 template <uint32_t n> inline uint32_t return_n(const uint8_t *, int) {
@@ -1052,16 +1052,6 @@ class parser {
   }
   int m_size = -1;
 
-  int body_index() const {
-    auto type = static_cast<pack_type>(header());
-    return body_index_and_size::from_type(type).index;
-  }
-
-  uint32_t body_size() const {
-    auto type = static_cast<pack_type>(header());
-    return body_index_and_size::from_type(type).size(m_p, m_size);
-  }
-
 public:
   parser() {}
 
@@ -1102,7 +1092,8 @@ public:
       os << '[';
 
       auto item_count = count();
-      auto offset = body_index();
+      auto type = static_cast<pack_type>(header());
+      auto offset = body_index_and_size::from_type(type).index;
       auto current = parser(m_p + offset, m_size - offset);
       for (int i = 0; i < item_count; ++i) {
         if (i > 0) {
@@ -1121,7 +1112,8 @@ public:
       os << '{';
 
       auto item_count = count();
-      auto offset = body_index();
+      auto type = static_cast<pack_type>(header());
+      auto offset = body_index_and_size::from_type(type).index;
       auto current = parser(m_p + offset, m_size - offset);
       for (int i = 0; i < item_count; ++i) {
         if (i > 0) {
@@ -1158,7 +1150,9 @@ public:
       } else if (is_string()) {
         os << '"' << get_string() << '"';
       } else if (is_binary()) {
-        os << "[bin:" << body_size() << "bytes]";
+        auto type = static_cast<pack_type>(header());
+        auto body = body_index_and_size::from_type(type);
+        os << "[bin:" << body.size(m_p, m_size) << "bytes]";
       } else {
         throw invalid_parse_error();
       }
@@ -1985,7 +1979,8 @@ public:
   }
 
   parser operator[](int index) const {
-    auto offset = body_index();
+    auto type = static_cast<pack_type>(header());
+    auto offset = body_index_and_size::from_type(type).index;
     auto current = parser(m_p + offset, m_size - offset);
     for (int i = 0; i < index; ++i) {
       current = current.next();
@@ -1995,7 +1990,8 @@ public:
 
   // string key accessor for map
   parser operator[](const std::string &key) const {
-    auto offset = body_index();
+    auto type = static_cast<pack_type>(header());
+    auto offset = body_index_and_size::from_type(type).index;
     auto current = parser(m_p + offset, m_size - offset);
     auto item_count = count();
     for (int i = 0; i < item_count; ++i) {
@@ -2014,8 +2010,17 @@ public:
   }
 
   parser next() const {
+    if (m_size < 1) {
+      throw empty_parse_error();
+    }
+    auto type = static_cast<pack_type>(m_p[0]);
+    auto body = body_index_and_size::from_type(type);
+    if (body.index < 0) {
+      throw invalid_parse_error();
+    }
+
     if (is_array()) {
-      auto offset = body_index();
+      auto offset = body.index;
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
       for (int i = 0; i < item_count; ++i) {
@@ -2023,7 +2028,7 @@ public:
       }
       return current;
     } else if (is_map()) {
-      auto offset = body_index();
+      auto offset = body.index;
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
       for (int i = 0; i < item_count; ++i) {
@@ -2032,8 +2037,7 @@ public:
       }
       return current;
     } else {
-
-      auto offset = body_index() + body_size();
+      auto offset = body.index + body.size(m_p, m_size);
       auto current = parser(m_p + offset, m_size - offset);
       return current;
     }
