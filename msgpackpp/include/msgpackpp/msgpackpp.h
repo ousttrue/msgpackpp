@@ -395,6 +395,7 @@ enum class parse_status {
 template <typename T> struct parse_result {
   parse_status status;
   T value;
+  operator T() const { return value; }
   bool is_ok() const { return status == parse_status::ok; }
   template <typename R> parse_result<R> cast() const {
     return {status, static_cast<R>(value)};
@@ -771,13 +772,15 @@ struct body_index_and_size {
       return OK(body_index_and_size{1 + 1, return_n<16>});
 
     case STR8:
-      return OK(body_index_and_size{1 + 1, [](auto p, int size) {
-                                      return body_number<uint8_t>(p, size).cast<uint32_t>();
-                                    }});
+      return OK(body_index_and_size{
+          1 + 1, [](auto p, int size) {
+            return body_number<uint8_t>(p, size).cast<uint32_t>();
+          }});
     case STR16:
-      return OK(body_index_and_size{1 + 2, [](auto p, int size) {
-                                      return body_number<uint16_t>(p, size).cast<uint32_t>();
-                                    }});
+      return OK(body_index_and_size{
+          1 + 2, [](auto p, int size) {
+            return body_number<uint16_t>(p, size).cast<uint32_t>();
+          }});
     case STR32:
       return OK(body_index_and_size{1 + 4, [](auto p, int size) {
                                       return body_number<uint32_t>(p, size);
@@ -1121,10 +1124,10 @@ public:
       os << '[';
 
       auto item_count = count();
-      auto type = header().value;
+      auto type = header();
       auto offset = body_index_and_size::from_type(type).value.index;
       auto current = parser(m_p + offset, m_size - offset);
-      for (int i = 0; i < item_count; ++i) {
+      for (uint8_t i = 0; i < item_count; ++i) {
         if (i > 0) {
           os << ',';
         }
@@ -1141,10 +1144,10 @@ public:
       os << '{';
 
       auto item_count = count();
-      auto type = header().value;
+      auto type = header();
       auto offset = body_index_and_size::from_type(type).value.index;
       auto current = parser(m_p + offset, m_size - offset);
-      for (int i = 0; i < item_count; ++i) {
+      for (uint8_t i = 0; i < item_count; ++i) {
         if (i > 0) {
           os << ',';
         }
@@ -1179,7 +1182,7 @@ public:
       } else if (is_string()) {
         os << '"' << get_string() << '"';
       } else if (is_binary()) {
-        auto type = header().value;
+        auto type = header();
         auto body = body_index_and_size::from_type(type).value;
         os << "[bin:" << body.size(m_p, m_size).value << "bytes]";
       } else {
@@ -1190,7 +1193,7 @@ public:
 
 #pragma region leaf
   parser get_bool(bool &value) const {
-    auto type = header().value;
+    auto type = header();
     if (type == pack_type::True)
       value = true;
     else if (type == pack_type::False)
@@ -1215,17 +1218,14 @@ private:
 
 public:
   parser get_string(std::string_view &value) const {
-    auto type = header().value;
+    auto type = header();
     switch (type) {
     case pack_type::STR32:
-      return get_string(value, 1 + 4,
-                        body_number<std::uint32_t>(m_p, m_size).value);
+      return get_string(value, 1 + 4, body_number<std::uint32_t>(m_p, m_size));
     case pack_type::STR16:
-      return get_string(value, 1 + 2,
-                        body_number<std::uint16_t>(m_p, m_size).value);
+      return get_string(value, 1 + 2, body_number<std::uint16_t>(m_p, m_size));
     case pack_type::STR8:
-      return get_string(value, 1 + 1,
-                        body_number<std::uint8_t>(m_p, m_size).value);
+      return get_string(value, 1 + 1, body_number<std::uint8_t>(m_p, m_size));
     case pack_type::FIX_STR:
       return get_string(value, 1, 0);
     case pack_type::FIX_STR_0x01:
@@ -1302,44 +1302,44 @@ public:
   }
 
   parser get_binary_view(std::string_view &value) const {
-    auto type = header().value;
+    auto type = header();
     switch (type) {
     case pack_type::BIN32: {
       auto begin = m_p + 1 + 4;
-      auto n = body_number<std::uint32_t>(m_p, m_size).value;
+      auto n = body_number<std::uint32_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(1 + 4 + n);
     }
 
     case pack_type::BIN16: {
       auto begin = m_p + 1 + 2;
-      auto n = body_number<std::uint16_t>(m_p, m_size).value;
+      auto n = body_number<std::uint16_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(1 + 2 + n);
     }
     case pack_type::BIN8: {
       auto begin = m_p + 1 + 1;
-      auto n = body_number<std::uint8_t>(m_p, m_size).value;
+      auto n = body_number<std::uint8_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(1 + 1 + n);
     }
 
     case pack_type::EXT32: {
       auto begin = m_p + 2 + 4;
-      auto n = body_number<std::uint32_t>(m_p, m_size).value;
+      auto n = body_number<std::uint32_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(2 + 4 + n);
     }
 
     case pack_type::EXT16: {
       auto begin = m_p + 2 + 2;
-      auto n = body_number<std::uint16_t>(m_p, m_size).value;
+      auto n = body_number<std::uint16_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(2 + 2 + n);
     }
     case pack_type::EXT8: {
       auto begin = m_p + 2 + 1;
-      auto n = body_number<std::uint8_t>(m_p, m_size).value;
+      auto n = body_number<std::uint8_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(2 + 1 + n);
     }
@@ -1405,7 +1405,7 @@ public:
   std::tuple<char, std::string_view> get_ext() const {
     std::string_view bytes;
     char type;
-    switch (header().value) {
+    switch (header()) {
     case FIX_EXT_1:
     case FIX_EXT_2:
     case FIX_EXT_4:
@@ -1436,7 +1436,7 @@ public:
   }
 
   template <typename T> parser get_number(T &value) const {
-    auto type = header().value;
+    auto type = header();
     if (type <= 0x7f) {
       // small int(0 - 127)
       value = type;
@@ -1448,31 +1448,31 @@ public:
       value = m_p[1];
       return advance(1 + 1);
     case pack_type::UINT16:
-      value = body_number<std::uint16_t>(m_p, m_size).value;
+      value = body_number<std::uint16_t>(m_p, m_size);
       return advance(1 + 2);
     case pack_type::UINT32:
-      value = body_number<std::uint32_t>(m_p, m_size).value;
+      value = body_number<std::uint32_t>(m_p, m_size);
       return advance(1 + 4);
     case pack_type::UINT64:
-      value = body_number<std::uint64_t>(m_p, m_size).value;
+      value = body_number<std::uint64_t>(m_p, m_size);
       return advance(1 + 8);
     case pack_type::INT8:
       value = m_p[1];
       return advance(1 + 1);
     case pack_type::INT16:
-      value = body_number<std::int16_t>(m_p, m_size).value;
+      value = body_number<std::int16_t>(m_p, m_size);
       return advance(1 + 2);
     case pack_type::INT32:
-      value = body_number<std::int32_t>(m_p, m_size).value;
+      value = body_number<std::int32_t>(m_p, m_size);
       return advance(1 + 4);
     case pack_type::INT64:
-      value = body_number<std::int64_t>(m_p, m_size).value;
+      value = body_number<std::int64_t>(m_p, m_size);
       return advance(1 + 8);
     case pack_type::FLOAT:
-      value = body_number<float>(m_p, m_size).value;
+      value = body_number<float>(m_p, m_size);
       return advance(1 + 4);
     case pack_type::DOUBLE:
-      value = body_number<double>(m_p, m_size).value;
+      value = body_number<double>(m_p, m_size);
       return advance(1 + 8);
     case pack_type::NEGATIVE_FIXNUM:
       value = -32;
@@ -1582,17 +1582,17 @@ public:
   }
 
   bool is_nil() const {
-    auto type = header().value;
+    auto type = header();
     return type == pack_type::NIL;
   }
 
   bool is_bool() const {
-    auto type = header().value;
+    auto type = header();
     return type == pack_type::True || type == pack_type::False;
   }
 
   bool is_number() const {
-    auto type = header().value;
+    auto type = header();
     switch (type) {
 #pragma region POSITIVE_FIXNUM 0x00 - 0x7F
     case POSITIVE_FIXNUM:
@@ -1784,7 +1784,7 @@ public:
   }
 
   bool is_binary() const {
-    auto type = header().value;
+    auto type = header();
     switch (type) {
     case pack_type::BIN8:
     case pack_type::BIN16:
@@ -1796,7 +1796,7 @@ public:
   }
 
   bool is_string() const {
-    auto type = header().value;
+    auto type = header();
     switch (type) {
     case pack_type::STR32:
       return true;
@@ -1877,7 +1877,7 @@ public:
 
 #pragma region array or map
   bool is_array() const {
-    auto type = header().value;
+    auto type = header();
     switch (type) {
     case pack_type::FIX_ARRAY:
     case pack_type::FIX_ARRAY_0x1:
@@ -1904,7 +1904,7 @@ public:
   }
 
   bool is_map() const {
-    auto type = header().value;
+    auto type = header();
     switch (type) {
     case pack_type::FIX_MAP:
     case pack_type::FIX_MAP_0x1:
@@ -1930,88 +1930,92 @@ public:
     return false;
   }
 
-  int count() const {
-    auto type = header().value;
+  parse_result<uint32_t> count() const {
+    auto _header = header();
+    if (!_header.is_ok()) {
+      return {_header.status};
+    }
+    auto type = _header;
     switch (type) {
     case pack_type::FIX_ARRAY:
-      return 0;
+      return OK(static_cast<uint32_t>(0));
     case pack_type::FIX_ARRAY_0x1:
-      return 1;
+      return OK(static_cast<uint32_t>(1));
     case pack_type::FIX_ARRAY_0x2:
-      return 2;
+      return OK(static_cast<uint32_t>(2));
     case pack_type::FIX_ARRAY_0x3:
-      return 3;
+      return OK(static_cast<uint32_t>(3));
     case pack_type::FIX_ARRAY_0x4:
-      return 4;
+      return OK(static_cast<uint32_t>(4));
     case pack_type::FIX_ARRAY_0x5:
-      return 5;
+      return OK(static_cast<uint32_t>(5));
     case pack_type::FIX_ARRAY_0x6:
-      return 6;
+      return OK(static_cast<uint32_t>(6));
     case pack_type::FIX_ARRAY_0x7:
-      return 7;
+      return OK(static_cast<uint32_t>(7));
     case pack_type::FIX_ARRAY_0x8:
-      return 8;
+      return OK(static_cast<uint32_t>(8));
     case pack_type::FIX_ARRAY_0x9:
-      return 9;
+      return OK(static_cast<uint32_t>(9));
     case pack_type::FIX_ARRAY_0xA:
-      return 10;
+      return OK(static_cast<uint32_t>(10));
     case pack_type::FIX_ARRAY_0xB:
-      return 11;
+      return OK(static_cast<uint32_t>(11));
     case pack_type::FIX_ARRAY_0xC:
-      return 12;
+      return OK(static_cast<uint32_t>(12));
     case pack_type::FIX_ARRAY_0xD:
-      return 13;
+      return OK(static_cast<uint32_t>(13));
     case pack_type::FIX_ARRAY_0xE:
-      return 14;
+      return OK(static_cast<uint32_t>(14));
     case pack_type::FIX_ARRAY_0xF:
-      return 15;
+      return OK(static_cast<uint32_t>(15));
     case pack_type::ARRAY16:
-      return body_number<std::uint16_t>(m_p, m_size).value;
+      return body_number<std::uint16_t>(m_p, m_size).cast<uint32_t>();
     case pack_type::ARRAY32:
-      return body_number<std::uint32_t>(m_p, m_size).value;
+      return body_number<std::uint32_t>(m_p, m_size);
     case pack_type::FIX_MAP:
-      return 0;
+      return OK(static_cast<uint32_t>(0));
     case pack_type::FIX_MAP_0x1:
-      return 1;
+      return OK(static_cast<uint32_t>(1));
     case pack_type::FIX_MAP_0x2:
-      return 2;
+      return OK(static_cast<uint32_t>(2));
     case pack_type::FIX_MAP_0x3:
-      return 3;
+      return OK(static_cast<uint32_t>(3));
     case pack_type::FIX_MAP_0x4:
-      return 4;
+      return OK(static_cast<uint32_t>(4));
     case pack_type::FIX_MAP_0x5:
-      return 5;
+      return OK(static_cast<uint32_t>(5));
     case pack_type::FIX_MAP_0x6:
-      return 6;
+      return OK(static_cast<uint32_t>(6));
     case pack_type::FIX_MAP_0x7:
-      return 7;
+      return OK(static_cast<uint32_t>(7));
     case pack_type::FIX_MAP_0x8:
-      return 8;
+      return OK(static_cast<uint32_t>(8));
     case pack_type::FIX_MAP_0x9:
-      return 9;
+      return OK(static_cast<uint32_t>(9));
     case pack_type::FIX_MAP_0xA:
-      return 10;
+      return OK(static_cast<uint32_t>(10));
     case pack_type::FIX_MAP_0xB:
-      return 11;
+      return OK(static_cast<uint32_t>(11));
     case pack_type::FIX_MAP_0xC:
-      return 12;
+      return OK(static_cast<uint32_t>(12));
     case pack_type::FIX_MAP_0xD:
-      return 13;
+      return OK(static_cast<uint32_t>(13));
     case pack_type::FIX_MAP_0xE:
-      return 14;
+      return OK(static_cast<uint32_t>(14));
     case pack_type::FIX_MAP_0xF:
-      return 15;
+      return OK(static_cast<uint32_t>(15));
     case pack_type::MAP16:
-      return body_number<std::uint16_t>(m_p, m_size).value;
+      return body_number<std::uint16_t>(m_p, m_size).cast<uint32_t>();
     case pack_type::MAP32:
-      return body_number<std::uint32_t>(m_p, m_size).value;
+      return body_number<std::uint32_t>(m_p, m_size);
     }
 
-    throw type_parse_error();
+    return {parse_status::invalid};
   }
 
   parser operator[](int index) const {
-    auto type = header().value;
+    auto type = header();
     auto offset = body_index_and_size::from_type(type).value.index;
     auto current = parser(m_p + offset, m_size - offset);
     for (int i = 0; i < index; ++i) {
@@ -2022,11 +2026,11 @@ public:
 
   // string key accessor for map
   parser operator[](const std::string &key) const {
-    auto type = header().value;
+    auto type = header();
     auto offset = body_index_and_size::from_type(type).value.index;
     auto current = parser(m_p + offset, m_size - offset);
     auto item_count = count();
-    for (int i = 0; i < item_count; ++i) {
+    for (uint8_t i = 0; i < item_count; ++i) {
       // key
       if (current.is_string()) {
         if (current.get_string() == key) {
@@ -2056,7 +2060,7 @@ public:
       auto offset = body.index;
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
-      for (int i = 0; i < item_count; ++i) {
+      for (uint8_t i = 0; i < item_count; ++i) {
         current = current.next();
       }
       return current;
@@ -2064,13 +2068,18 @@ public:
       auto offset = body.index;
       auto current = parser(m_p + offset, m_size - offset);
       auto item_count = count();
-      for (int i = 0; i < item_count; ++i) {
+      for (uint8_t i = 0; i < item_count; ++i) {
         current = current.next();
         current = current.next();
       }
       return current;
     } else {
-      auto offset = body.index + body.size(m_p, m_size).value;
+      auto _size = body.size(m_p, m_size);
+      if (!_size.is_ok()) {
+        throw invalid_parse_error();
+      }
+      auto size = _size.value;
+      auto offset = body.index + size;
       auto current = parser(m_p + offset, m_size - offset);
       return current;
     }
@@ -2235,11 +2244,12 @@ inline parser _deserialize(std::tuple<T, TS...> &value, const parser &u) {
 template <typename... TS>
 inline parser deserialize(const parser &u, std::tuple<TS...> &value) {
   assert(u.is_array());
-  if (u.count() !=
+  auto count = u.count();
+  if (count !=
       std::tuple_size<
           typename std::remove_reference<decltype(value)>::type>::value) {
     std::stringstream ss;
-    ss << "invalid arguments count: " << u.count() << ", but expected: "
+    ss << "invalid arguments count: " << count << ", but expected: "
        << std::tuple_size<
               typename std::remove_reference<decltype(value)>::type>::value;
     throw std::runtime_error(ss.str());
@@ -2507,7 +2517,7 @@ decltype(auto) procedure_call(F f, AS... args) {
 #define MPPP_UNPACK_KV_BEGIN()                                                 \
   auto count = u.count();                                                      \
   auto uu = u[0];                                                              \
-  for (int i = 0; i < count; ++i) {                                            \
+  for (uint8_t i = 0; i < count; ++i) {                                            \
     std::string key;                                                           \
     uu >> key;                                                                 \
     uu = uu.next();                                                            \
