@@ -2151,7 +2151,7 @@ public:
     auto type = static_cast<pack_type>(m_p[0]);
     auto _body = body_index_and_size::from_type(type);
     if (!_body.is_ok()) {
-      return {parse_status::invalid};
+      return {_body.status};
     }
     auto body = _body.value;
 
@@ -2201,7 +2201,7 @@ public:
     } else {
       auto size = body.size(m_p, m_size);
       if (!size.is_ok()) {
-        return {parse_status::invalid};
+        return {size.status};
       }
       auto offset = body.index + size;
       if (offset > m_size) {
