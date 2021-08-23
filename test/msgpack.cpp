@@ -579,7 +579,7 @@ TEST_CASE("fixmap") {
   REQUIRE(3 == parsed.count());
 
   auto count = parsed.count();
-  for (auto i = 0; i < count; ++i) {
+  for (size_t i = 0; i < count; ++i) {
     std::stringstream ss;
     ss << "key" << (i + 1);
     REQUIRE(ss.str() == parsed[i * 2].get_string());
