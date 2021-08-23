@@ -398,6 +398,9 @@ template <typename T> struct parse_result {
   T value;
   operator T() const { return value; }
   bool is_ok() const { return status == parse_status::ok; }
+  bool is_stream_end() const {
+    return status == parse_status::empty || status == parse_status::lack;
+  }
   template <typename R> parse_result<R> cast() const {
     return {status, static_cast<R>(value)};
   }
@@ -2084,10 +2087,30 @@ public:
     return {parse_status::invalid};
   }
 
-  parser operator[](int index) const {
+  parse_result<parser> first_array_item() const noexcept {
     auto type = header();
-    auto offset = body_index_and_size::from_type(type).value.index;
-    auto current = parser(m_p + offset, m_size - offset);
+    if (!type.is_ok()) {
+      return {type.status};
+    }
+    if (!is_array()) {
+      return {parse_status::type};
+    }
+    if (count() == 0) {
+      return {parse_status::invalid};
+    }
+    auto body = body_index_and_size::from_type(type);
+    if (!body.is_ok()) {
+      return {body.status};
+    }
+    auto offset = body.value.index;
+    if (offset > m_size) {
+      return {parse_status::lack};
+    }
+    return OK(parser(m_p + offset, m_size - offset));
+  }
+
+  parser operator[](int index) const {
+    auto current = first_array_item().value;
     for (int i = 0; i < index; ++i) {
       current = current.next();
     }
