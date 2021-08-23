@@ -247,7 +247,7 @@ inline std::ostream &operator<<(std::ostream &os, const func_call &request) {
   return os;
 }
 
-enum class error_code {
+enum class rpc_errors {
   success,
   error_dispatcher_no_handler,
   error_params_not_array,
@@ -259,13 +259,10 @@ enum class error_code {
   no_request_for_response,
   invalid_rpc,
 };
-struct msgerror : std::runtime_error {
-  error_code code;
 
-public:
-  msgerror(error_code code, const std::string &msg = "")
-      : std::runtime_error(msg), code(code) {}
-};
+using rpc_scope = status_scope<rpc_errors, rpc_errors::success>;
+template <typename T> using rpc_result = rpc_scope::result<T>;
+
 template <typename Transport> class rpc_base {
   std::shared_ptr<session<Transport>> m_session;
 
@@ -277,8 +274,8 @@ template <typename Transport> class rpc_base {
   std::vector<uint8_t> m_read_buffer;
   std::unordered_map<int, std::shared_ptr<func_call>> m_request_map;
 
-  using on_error_t = std::function<void(error_code error)>;
-  on_error_t m_on_error = [](error_code) {};
+  // using on_error_t = std::function<void(error_code error)>;
+  // on_error_t m_on_error = [](error_code) {};
 
   using on_send_t = std::function<void(const std::vector<uint8_t> &data)>;
   on_send_t m_on_send = [](const std::vector<uint8_t> &data) {};
@@ -286,8 +283,15 @@ template <typename Transport> class rpc_base {
   using on_msg_t = std::function<void(const msgpackpp::parser &msg)>;
   on_msg_t m_on_msg = [](const msgpackpp::parser &msg) {};
 
+  using on_rpc_error_t =
+      std::function<void(rpc_errors ec, const msgpackpp::parser &msg)>;
+  on_rpc_error_t m_on_rpc_error = [](auto, auto) {};
+
 public:
-  void set_on_error(const on_error_t &on_error) { m_on_error = on_error; }
+  // void set_on_error(const on_error_t &on_error) { m_on_error = on_error; }
+  void set_on_rpc_error(const on_rpc_error_t &callback) {
+    m_on_rpc_error = callback;
+  }
 
   void set_on_send(const on_send_t &on_send) { m_on_send = on_send; }
 
@@ -305,7 +309,7 @@ public:
 
 public:
   void add_proc(const std::string &method,
-                   const msgpackpp::procedurecall &proc) {
+                const msgpackpp::procedurecall &proc) {
     m_handlerMap.insert(std::make_pair(method, proc));
   }
 
@@ -356,35 +360,44 @@ public:
 
 private:
   void on_message(const msgpackpp::parser &msg) {
+    // logger
     m_on_msg(msg);
 
     auto type = msg[0].get_number<int>();
     switch (type) {
-    case 0:
+    case 0: {
       // request [0, id, method, args]
-      {
-        auto id = msg[1].get_number<int>();
-        try {
-          auto method = msg[2].get_string();
-          // execute callback
-          auto result =
-              on_request(std::string(method.begin(), method.end()), msg[3]);
-          auto response = msgpackpp::make_rpc_response_packed(id, "", result);
-          write_async(response);
-        } catch (const std::runtime_error &ex) {
-          auto response =
-              msgpackpp::make_rpc_response(id, ex.what(), msgpackpp::nil);
-          write_async(response);
-        }
+      auto id = msg[1].get_number<int>();
+      auto method = msg[2].get_string();
+      // execute callback
+      auto result = dispatch(std::string(method.begin(), method.end()), msg[3]);
+      if (result.is_ok()) {
+        auto response = msgpackpp::make_rpc_response_packed(id, "", result);
+        write_async(response);
+      } else {
+        m_on_rpc_error(result.status, msg);
       }
       break;
+    }
+
+    case 2: {
+      // response [2, method, args]
+
+      auto method = msg[1].get_string();
+      // execute callback. no return value
+      auto result = dispatch(std::string(method.begin(), method.end()), msg[2]);
+      if (!result.is_ok()) {
+        m_on_rpc_error(result.status, msg);
+      }
+      break;
+    }
 
     case 1: {
       // response [1, id, error, result]
       auto id = msg[1].get_number<int>();
       if (id == 0) {
         // error message
-        auto a = 0;
+        m_on_rpc_error(rpc_errors::invalid_rpc, msg);
       } else {
         auto found = m_request_map.find(id);
         if (found != m_request_map.end()) {
@@ -395,48 +408,35 @@ private:
             found->second->set_error(msg[2]);
           }
         } else {
-          std::cout << msg << std::endl;
-          m_on_error(error_code::no_request_for_response);
+          m_on_rpc_error(rpc_errors::no_request_for_response, msg);
         }
       }
-    } break;
-
-    case 2:
-      // response [2, method, args]
-      try {
-        auto method = msg[1].get_string();
-        // execute callback. no return value
-        on_request(std::string(method.begin(), method.end()), msg[2]);
-      } catch (const msgerror &) {
-        auto a = 0;
-        // auto response =
-        //     msgpackpp::make_rpc_response(id, ex.what(), msgpackpp::nil);
-        // m_session->write_async(response);
-        // TODO: error notify ?
-      }
       break;
+    }
 
-    default:
-      throw msgerror(error_code::invalid_rpc);
+    default: {
+      m_on_rpc_error(rpc_errors::invalid_rpc, msg);
+      break;
+    }
     }
   }
 
-private:
-  msgpackpp::bytes on_request(const std::string &method_name,
-                              const msgpackpp::parser &params) {
+public:
+  rpc_result<msgpackpp::bytes> dispatch(const std::string &method_name,
+                                        const msgpackpp::parser &params) {
     auto found = m_handlerMap.find(method_name);
-    if (found != m_handlerMap.end()) {
-      auto func = found->second;
-      return func(params);
+    if (found == m_handlerMap.end()) {
+      return {rpc_errors::error_dispatcher_no_handler};
     }
 
-    throw msgerror(error_code::error_dispatcher_no_handler);
+    auto func = found->second;
+    return rpc_scope::OK(func(params));
   }
 
 public:
   template <typename... ARGS>
-  std::future<std::vector<uint8_t>> request(const std::string &method,
-                                            ARGS... args) {
+  std::future<std::vector<uint8_t>> request_async(const std::string &method,
+                                                  ARGS... args) {
     auto p = std::make_shared<std::promise<std::vector<uint8_t>>>();
     auto f = p->get_future();
 

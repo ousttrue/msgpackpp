@@ -393,20 +393,26 @@ enum class parse_status {
   type,
 };
 
-template <typename T> struct parse_result {
-  parse_status status;
-  T value;
-  operator T() const { return value; }
-  bool is_ok() const { return status == parse_status::ok; }
-  bool is_stream_end() const {
-    return status == parse_status::empty || status == parse_status::lack;
-  }
-  template <typename R> parse_result<R> cast() const {
-    return {status, static_cast<R>(value)};
+template <typename Status, Status OK_VALUE> struct status_scope {
+  template <typename T> struct result {
+    Status status;
+    T value;
+    operator T() const { return value; }
+    bool is_ok() const { return status == OK_VALUE; }
+    template <typename R> result<R> cast() const {
+      return {status, static_cast<R>(value)};
+    }
+  };
+
+  template <typename T> static result<T> OK(const T &value) {
+    return {OK_VALUE, value};
   }
 };
+using parse_scope = status_scope<parse_status, parse_status::ok>;
+template <typename T> using parse_result = parse_scope::result<T>;
+
 template <typename T> parse_result<T> OK(const T &value) {
-  return {parse_status::ok, value};
+  return parse_scope::OK(value);
 }
 
 inline parse_result<uint32_t> no_size_parse_error(const uint8_t *, int) {
