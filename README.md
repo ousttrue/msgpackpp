@@ -26,7 +26,7 @@
 * [ ] error handling
 * [ ] no throw API
 * [ ] use `std::span`. (using std::string_view)
-* [ ] merge body_index & body_size
+* [x] merge body_index & body_size
 
 ## Version 2
 

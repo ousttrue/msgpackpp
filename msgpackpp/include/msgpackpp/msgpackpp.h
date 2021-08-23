@@ -94,10 +94,6 @@ struct not_implemented_parse_error : public parse_error {
   not_implemented_parse_error() : parse_error("not implemented") {}
 };
 
-struct no_size_parse_error : public parse_error {
-  no_size_parse_error() : parse_error("no size") {}
-};
-
 struct type_parse_error : public parse_error {
   type_parse_error() : parse_error("type") {}
 };
@@ -389,6 +385,427 @@ enum pack_type : std::uint8_t {
 #pragma endregion
 };
 
+inline uint32_t no_size_parse_error(const uint8_t *, int) {
+  throw invalid_parse_error;
+}
+
+template <uint32_t n> inline uint32_t return_n(const uint8_t *, int) {
+  return n;
+}
+
+template <typename T> T body_number(const uint8_t *m_p, int m_size) {
+  switch (sizeof(T)) {
+  case 1:
+    if (m_size < 1 + sizeof(T))
+      throw lack_parse_error();
+    return m_p[1];
+  case 2:
+    if (m_size < 1 + sizeof(T))
+      throw lack_parse_error();
+    return (m_p[1] << 8) | m_p[2];
+  case 4: {
+    if (m_size < 1 + sizeof(T))
+      throw lack_parse_error();
+    std::uint8_t buf[] = {m_p[4], m_p[3], m_p[2], m_p[1]};
+    return *reinterpret_cast<T *>(buf);
+  }
+  case 8: {
+    if (m_size < 1 + sizeof(T))
+      throw lack_parse_error();
+    std::uint8_t buf[] = {m_p[8], m_p[7], m_p[6], m_p[5],
+                          m_p[4], m_p[3], m_p[2], m_p[1]};
+    return *reinterpret_cast<T *>(buf);
+  }
+  }
+
+  throw invalid_parse_error();
+  return T();
+}
+
+struct body_index_and_size {
+  int index;
+
+  uint32_t (*size)(const uint8_t *p, int size);
+
+  static constexpr body_index_and_size from_type(pack_type t) {
+    switch (t) {
+#pragma region POSITIVE_FIXNUM 0x00 - 0x7F
+    case POSITIVE_FIXNUM:
+    case POSITIVE_FIXNUM_0x01:
+    case POSITIVE_FIXNUM_0x02:
+    case POSITIVE_FIXNUM_0x03:
+    case POSITIVE_FIXNUM_0x04:
+    case POSITIVE_FIXNUM_0x05:
+    case POSITIVE_FIXNUM_0x06:
+    case POSITIVE_FIXNUM_0x07:
+    case POSITIVE_FIXNUM_0x08:
+    case POSITIVE_FIXNUM_0x09:
+    case POSITIVE_FIXNUM_0x0A:
+    case POSITIVE_FIXNUM_0x0B:
+    case POSITIVE_FIXNUM_0x0C:
+    case POSITIVE_FIXNUM_0x0D:
+    case POSITIVE_FIXNUM_0x0E:
+    case POSITIVE_FIXNUM_0x0F:
+
+    case POSITIVE_FIXNUM_0x10:
+    case POSITIVE_FIXNUM_0x11:
+    case POSITIVE_FIXNUM_0x12:
+    case POSITIVE_FIXNUM_0x13:
+    case POSITIVE_FIXNUM_0x14:
+    case POSITIVE_FIXNUM_0x15:
+    case POSITIVE_FIXNUM_0x16:
+    case POSITIVE_FIXNUM_0x17:
+    case POSITIVE_FIXNUM_0x18:
+    case POSITIVE_FIXNUM_0x19:
+    case POSITIVE_FIXNUM_0x1A:
+    case POSITIVE_FIXNUM_0x1B:
+    case POSITIVE_FIXNUM_0x1C:
+    case POSITIVE_FIXNUM_0x1D:
+    case POSITIVE_FIXNUM_0x1E:
+    case POSITIVE_FIXNUM_0x1F:
+
+    case POSITIVE_FIXNUM_0x20:
+    case POSITIVE_FIXNUM_0x21:
+    case POSITIVE_FIXNUM_0x22:
+    case POSITIVE_FIXNUM_0x23:
+    case POSITIVE_FIXNUM_0x24:
+    case POSITIVE_FIXNUM_0x25:
+    case POSITIVE_FIXNUM_0x26:
+    case POSITIVE_FIXNUM_0x27:
+    case POSITIVE_FIXNUM_0x28:
+    case POSITIVE_FIXNUM_0x29:
+    case POSITIVE_FIXNUM_0x2A:
+    case POSITIVE_FIXNUM_0x2B:
+    case POSITIVE_FIXNUM_0x2C:
+    case POSITIVE_FIXNUM_0x2D:
+    case POSITIVE_FIXNUM_0x2E:
+    case POSITIVE_FIXNUM_0x2F:
+
+    case POSITIVE_FIXNUM_0x30:
+    case POSITIVE_FIXNUM_0x31:
+    case POSITIVE_FIXNUM_0x32:
+    case POSITIVE_FIXNUM_0x33:
+    case POSITIVE_FIXNUM_0x34:
+    case POSITIVE_FIXNUM_0x35:
+    case POSITIVE_FIXNUM_0x36:
+    case POSITIVE_FIXNUM_0x37:
+    case POSITIVE_FIXNUM_0x38:
+    case POSITIVE_FIXNUM_0x39:
+    case POSITIVE_FIXNUM_0x3A:
+    case POSITIVE_FIXNUM_0x3B:
+    case POSITIVE_FIXNUM_0x3C:
+    case POSITIVE_FIXNUM_0x3D:
+    case POSITIVE_FIXNUM_0x3E:
+    case POSITIVE_FIXNUM_0x3F:
+
+    case POSITIVE_FIXNUM_0x40:
+    case POSITIVE_FIXNUM_0x41:
+    case POSITIVE_FIXNUM_0x42:
+    case POSITIVE_FIXNUM_0x43:
+    case POSITIVE_FIXNUM_0x44:
+    case POSITIVE_FIXNUM_0x45:
+    case POSITIVE_FIXNUM_0x46:
+    case POSITIVE_FIXNUM_0x47:
+    case POSITIVE_FIXNUM_0x48:
+    case POSITIVE_FIXNUM_0x49:
+    case POSITIVE_FIXNUM_0x4A:
+    case POSITIVE_FIXNUM_0x4B:
+    case POSITIVE_FIXNUM_0x4C:
+    case POSITIVE_FIXNUM_0x4D:
+    case POSITIVE_FIXNUM_0x4E:
+    case POSITIVE_FIXNUM_0x4F:
+
+    case POSITIVE_FIXNUM_0x50:
+    case POSITIVE_FIXNUM_0x51:
+    case POSITIVE_FIXNUM_0x52:
+    case POSITIVE_FIXNUM_0x53:
+    case POSITIVE_FIXNUM_0x54:
+    case POSITIVE_FIXNUM_0x55:
+    case POSITIVE_FIXNUM_0x56:
+    case POSITIVE_FIXNUM_0x57:
+    case POSITIVE_FIXNUM_0x58:
+    case POSITIVE_FIXNUM_0x59:
+    case POSITIVE_FIXNUM_0x5A:
+    case POSITIVE_FIXNUM_0x5B:
+    case POSITIVE_FIXNUM_0x5C:
+    case POSITIVE_FIXNUM_0x5D:
+    case POSITIVE_FIXNUM_0x5E:
+    case POSITIVE_FIXNUM_0x5F:
+
+    case POSITIVE_FIXNUM_0x60:
+    case POSITIVE_FIXNUM_0x61:
+    case POSITIVE_FIXNUM_0x62:
+    case POSITIVE_FIXNUM_0x63:
+    case POSITIVE_FIXNUM_0x64:
+    case POSITIVE_FIXNUM_0x65:
+    case POSITIVE_FIXNUM_0x66:
+    case POSITIVE_FIXNUM_0x67:
+    case POSITIVE_FIXNUM_0x68:
+    case POSITIVE_FIXNUM_0x69:
+    case POSITIVE_FIXNUM_0x6A:
+    case POSITIVE_FIXNUM_0x6B:
+    case POSITIVE_FIXNUM_0x6C:
+    case POSITIVE_FIXNUM_0x6D:
+    case POSITIVE_FIXNUM_0x6E:
+    case POSITIVE_FIXNUM_0x6F:
+
+    case POSITIVE_FIXNUM_0x70:
+    case POSITIVE_FIXNUM_0x71:
+    case POSITIVE_FIXNUM_0x72:
+    case POSITIVE_FIXNUM_0x73:
+    case POSITIVE_FIXNUM_0x74:
+    case POSITIVE_FIXNUM_0x75:
+    case POSITIVE_FIXNUM_0x76:
+    case POSITIVE_FIXNUM_0x77:
+    case POSITIVE_FIXNUM_0x78:
+    case POSITIVE_FIXNUM_0x79:
+    case POSITIVE_FIXNUM_0x7A:
+    case POSITIVE_FIXNUM_0x7B:
+    case POSITIVE_FIXNUM_0x7C:
+    case POSITIVE_FIXNUM_0x7D:
+    case POSITIVE_FIXNUM_0x7E:
+    case POSITIVE_FIXNUM_0x7F:
+      return {1, return_n<0>};
+#pragma endregion
+
+#pragma region FIX_MAP 0x80 - 0x8F
+    case FIX_MAP:
+    case FIX_MAP_0x1:
+    case FIX_MAP_0x2:
+    case FIX_MAP_0x3:
+    case FIX_MAP_0x4:
+    case FIX_MAP_0x5:
+    case FIX_MAP_0x6:
+    case FIX_MAP_0x7:
+    case FIX_MAP_0x8:
+    case FIX_MAP_0x9:
+    case FIX_MAP_0xA:
+    case FIX_MAP_0xB:
+    case FIX_MAP_0xC:
+    case FIX_MAP_0xD:
+    case FIX_MAP_0xE:
+    case FIX_MAP_0xF:
+      return {1, no_size_parse_error};
+#pragma endregion
+
+#pragma region FIX_ARRAY 0x90 - 0x9F
+    case FIX_ARRAY:
+    case FIX_ARRAY_0x1:
+    case FIX_ARRAY_0x2:
+    case FIX_ARRAY_0x3:
+    case FIX_ARRAY_0x4:
+    case FIX_ARRAY_0x5:
+    case FIX_ARRAY_0x6:
+    case FIX_ARRAY_0x7:
+    case FIX_ARRAY_0x8:
+    case FIX_ARRAY_0x9:
+    case FIX_ARRAY_0xA:
+    case FIX_ARRAY_0xB:
+    case FIX_ARRAY_0xC:
+    case FIX_ARRAY_0xD:
+    case FIX_ARRAY_0xE:
+    case FIX_ARRAY_0xF:
+      return {1, no_size_parse_error};
+#pragma endregion
+
+#pragma region FIX_STR 0xA0 - 0xBF
+    case FIX_STR:
+      return {1, return_n<0>};
+    case FIX_STR_0x01:
+      return {1, return_n<1>};
+    case FIX_STR_0x02:
+      return {1, return_n<2>};
+    case FIX_STR_0x03:
+      return {1, return_n<3>};
+    case FIX_STR_0x04:
+      return {1, return_n<4>};
+    case FIX_STR_0x05:
+      return {1, return_n<5>};
+    case FIX_STR_0x06:
+      return {1, return_n<6>};
+    case FIX_STR_0x07:
+      return {1, return_n<7>};
+    case FIX_STR_0x08:
+      return {1, return_n<8>};
+    case FIX_STR_0x09:
+      return {1, return_n<9>};
+    case FIX_STR_0x0A:
+      return {1, return_n<10>};
+    case FIX_STR_0x0B:
+      return {1, return_n<11>};
+    case FIX_STR_0x0C:
+      return {1, return_n<12>};
+    case FIX_STR_0x0D:
+      return {1, return_n<13>};
+    case FIX_STR_0x0E:
+      return {1, return_n<14>};
+    case FIX_STR_0x0F:
+      return {1, return_n<15>};
+    case FIX_STR_0x10:
+      return {1, return_n<16>};
+    case FIX_STR_0x11:
+      return {1, return_n<17>};
+    case FIX_STR_0x12:
+      return {1, return_n<18>};
+    case FIX_STR_0x13:
+      return {1, return_n<19>};
+    case FIX_STR_0x14:
+      return {1, return_n<20>};
+    case FIX_STR_0x15:
+      return {1, return_n<21>};
+    case FIX_STR_0x16:
+      return {1, return_n<22>};
+    case FIX_STR_0x17:
+      return {1, return_n<23>};
+    case FIX_STR_0x18:
+      return {1, return_n<24>};
+    case FIX_STR_0x19:
+      return {1, return_n<25>};
+    case FIX_STR_0x1A:
+      return {1, return_n<26>};
+    case FIX_STR_0x1B:
+      return {1, return_n<27>};
+    case FIX_STR_0x1C:
+      return {1, return_n<28>};
+    case FIX_STR_0x1D:
+      return {1, return_n<29>};
+    case FIX_STR_0x1E:
+      return {1, return_n<30>};
+    case FIX_STR_0x1F:
+      return {1, return_n<31>};
+#pragma endregion
+
+    case NIL:
+      return {1, return_n<0>};
+    case NEVER_USED:
+      return {-1, no_size_parse_error};
+    case False:
+      return {1, return_n<0>};
+    case True:
+      return {1, return_n<0>};
+
+    case BIN8:
+      return {1 + 1, [](auto p, int size) -> uint32_t {
+                return body_number<uint8_t>(p, size);
+              }};
+    case BIN16:
+      return {1 + 2, [](auto p, int size) -> uint32_t {
+                return body_number<uint16_t>(p, size);
+              }};
+    case BIN32:
+      return {1 + 4, [](auto p, int size) -> uint32_t {
+                return body_number<uint32_t>(p, size);
+              }};
+
+    case EXT8:
+      return {1 + 1 + 1, [](auto p, int size) -> uint32_t {
+                return body_number<uint8_t>(p, size);
+              }};
+    case EXT16:
+      return {1 + 2 + 1, [](auto p, int size) -> uint32_t {
+                return body_number<uint16_t>(p, size);
+              }};
+    case EXT32:
+      return {1 + 4 + 1, [](auto p, int size) -> uint32_t {
+                return body_number<uint32_t>(p, size);
+              }};
+
+    case FLOAT:
+      return {1, return_n<4>};
+    case DOUBLE:
+      return {1, return_n<8>};
+    case UINT8:
+      return {1, return_n<1>};
+    case UINT16:
+      return {1, return_n<2>};
+    case UINT32:
+      return {1, return_n<4>};
+    case UINT64:
+      return {1, return_n<8>};
+    case INT8:
+      return {1, return_n<1>};
+    case INT16:
+      return {1, return_n<2>};
+    case INT32:
+      return {1, return_n<4>};
+    case INT64:
+      return {1, return_n<8>};
+
+    case FIX_EXT_1:
+      return {1 + 1, return_n<1>};
+    case FIX_EXT_2:
+      return {1 + 1, return_n<2>};
+    case FIX_EXT_4:
+      return {1 + 1, return_n<4>};
+    case FIX_EXT_8:
+      return {1 + 1, return_n<8>};
+    case FIX_EXT_16:
+      return {1 + 1, return_n<16>};
+
+    case STR8:
+      return {1 + 1, [](auto p, int size) -> uint32_t {
+                return body_number<uint8_t>(p, size);
+              }};
+    case STR16:
+      return {1 + 2, [](auto p, int size) -> uint32_t {
+                return body_number<uint16_t>(p, size);
+              }};
+    case STR32:
+      return {1 + 4, [](auto p, int size) -> uint32_t {
+                return body_number<uint32_t>(p, size);
+              }};
+
+    case ARRAY16:
+      return {1 + 2, no_size_parse_error};
+    case ARRAY32:
+      return {1 + 4, no_size_parse_error};
+    case MAP16:
+      return {1 + 2, no_size_parse_error};
+    case MAP32:
+      return {1 + 4, no_size_parse_error};
+
+#pragma region NEGATIVE_FIXNUM 0xE0 - 0xFF
+    case NEGATIVE_FIXNUM:
+    case NEGATIVE_FIXNUM_0x1F:
+    case NEGATIVE_FIXNUM_0x1E:
+    case NEGATIVE_FIXNUM_0x1D:
+    case NEGATIVE_FIXNUM_0x1C:
+    case NEGATIVE_FIXNUM_0x1B:
+    case NEGATIVE_FIXNUM_0x1A:
+    case NEGATIVE_FIXNUM_0x19:
+    case NEGATIVE_FIXNUM_0x18:
+    case NEGATIVE_FIXNUM_0x17:
+    case NEGATIVE_FIXNUM_0x16:
+    case NEGATIVE_FIXNUM_0x15:
+    case NEGATIVE_FIXNUM_0x14:
+    case NEGATIVE_FIXNUM_0x13:
+    case NEGATIVE_FIXNUM_0x12:
+    case NEGATIVE_FIXNUM_0x11:
+    case NEGATIVE_FIXNUM_0x10:
+    case NEGATIVE_FIXNUM_0x0F:
+    case NEGATIVE_FIXNUM_0x0E:
+    case NEGATIVE_FIXNUM_0x0D:
+    case NEGATIVE_FIXNUM_0x0C:
+    case NEGATIVE_FIXNUM_0x0B:
+    case NEGATIVE_FIXNUM_0x0A:
+    case NEGATIVE_FIXNUM_0x09:
+    case NEGATIVE_FIXNUM_0x08:
+    case NEGATIVE_FIXNUM_0x07:
+    case NEGATIVE_FIXNUM_0x06:
+    case NEGATIVE_FIXNUM_0x05:
+    case NEGATIVE_FIXNUM_0x04:
+    case NEGATIVE_FIXNUM_0x03:
+    case NEGATIVE_FIXNUM_0x02:
+    case NEGATIVE_FIXNUM_0x01:
+      return {1, 0};
+#pragma endregion
+
+    default:
+      return {-1, no_size_parse_error};
+    }
+  }
+};
+
 class packer {
   typedef std::vector<std::uint8_t> buffer;
   std::shared_ptr<buffer> m_buffer;
@@ -635,1129 +1052,14 @@ class parser {
   }
   int m_size = -1;
 
-  template <typename T> T body_number() const {
-    switch (sizeof(T)) {
-    case 1:
-      if (m_size < 1 + sizeof(T))
-        throw lack_parse_error();
-      return m_p[1];
-    case 2:
-      if (m_size < 1 + sizeof(T))
-        throw lack_parse_error();
-      return (m_p[1] << 8) | m_p[2];
-    case 4: {
-      if (m_size < 1 + sizeof(T))
-        throw lack_parse_error();
-      std::uint8_t buf[] = {m_p[4], m_p[3], m_p[2], m_p[1]};
-      return *reinterpret_cast<T *>(buf);
-    }
-    case 8: {
-      if (m_size < 1 + sizeof(T))
-        throw lack_parse_error();
-      std::uint8_t buf[] = {m_p[8], m_p[7], m_p[6], m_p[5],
-                            m_p[4], m_p[3], m_p[2], m_p[1]};
-      return *reinterpret_cast<T *>(buf);
-    }
-    }
-
-    throw invalid_parse_error();
-    return T();
-  }
-
   int body_index() const {
     auto type = static_cast<pack_type>(header());
-    switch (type) {
-#pragma region POSITIVE_FIXNUM 0x00 - 0x7F
-    case POSITIVE_FIXNUM:
-      return 1;
-    case POSITIVE_FIXNUM_0x01:
-      return 1;
-    case POSITIVE_FIXNUM_0x02:
-      return 1;
-    case POSITIVE_FIXNUM_0x03:
-      return 1;
-    case POSITIVE_FIXNUM_0x04:
-      return 1;
-    case POSITIVE_FIXNUM_0x05:
-      return 1;
-    case POSITIVE_FIXNUM_0x06:
-      return 1;
-    case POSITIVE_FIXNUM_0x07:
-      return 1;
-    case POSITIVE_FIXNUM_0x08:
-      return 1;
-    case POSITIVE_FIXNUM_0x09:
-      return 1;
-    case POSITIVE_FIXNUM_0x0A:
-      return 1;
-    case POSITIVE_FIXNUM_0x0B:
-      return 1;
-    case POSITIVE_FIXNUM_0x0C:
-      return 1;
-    case POSITIVE_FIXNUM_0x0D:
-      return 1;
-    case POSITIVE_FIXNUM_0x0E:
-      return 1;
-    case POSITIVE_FIXNUM_0x0F:
-      return 1;
-
-    case POSITIVE_FIXNUM_0x10:
-      return 1;
-    case POSITIVE_FIXNUM_0x11:
-      return 1;
-    case POSITIVE_FIXNUM_0x12:
-      return 1;
-    case POSITIVE_FIXNUM_0x13:
-      return 1;
-    case POSITIVE_FIXNUM_0x14:
-      return 1;
-    case POSITIVE_FIXNUM_0x15:
-      return 1;
-    case POSITIVE_FIXNUM_0x16:
-      return 1;
-    case POSITIVE_FIXNUM_0x17:
-      return 1;
-    case POSITIVE_FIXNUM_0x18:
-      return 1;
-    case POSITIVE_FIXNUM_0x19:
-      return 1;
-    case POSITIVE_FIXNUM_0x1A:
-      return 1;
-    case POSITIVE_FIXNUM_0x1B:
-      return 1;
-    case POSITIVE_FIXNUM_0x1C:
-      return 1;
-    case POSITIVE_FIXNUM_0x1D:
-      return 1;
-    case POSITIVE_FIXNUM_0x1E:
-      return 1;
-    case POSITIVE_FIXNUM_0x1F:
-      return 1;
-
-    case POSITIVE_FIXNUM_0x20:
-      return 1;
-    case POSITIVE_FIXNUM_0x21:
-      return 1;
-    case POSITIVE_FIXNUM_0x22:
-      return 1;
-    case POSITIVE_FIXNUM_0x23:
-      return 1;
-    case POSITIVE_FIXNUM_0x24:
-      return 1;
-    case POSITIVE_FIXNUM_0x25:
-      return 1;
-    case POSITIVE_FIXNUM_0x26:
-      return 1;
-    case POSITIVE_FIXNUM_0x27:
-      return 1;
-    case POSITIVE_FIXNUM_0x28:
-      return 1;
-    case POSITIVE_FIXNUM_0x29:
-      return 1;
-    case POSITIVE_FIXNUM_0x2A:
-      return 1;
-    case POSITIVE_FIXNUM_0x2B:
-      return 1;
-    case POSITIVE_FIXNUM_0x2C:
-      return 1;
-    case POSITIVE_FIXNUM_0x2D:
-      return 1;
-    case POSITIVE_FIXNUM_0x2E:
-      return 1;
-    case POSITIVE_FIXNUM_0x2F:
-      return 1;
-
-    case POSITIVE_FIXNUM_0x30:
-      return 1;
-    case POSITIVE_FIXNUM_0x31:
-      return 1;
-    case POSITIVE_FIXNUM_0x32:
-      return 1;
-    case POSITIVE_FIXNUM_0x33:
-      return 1;
-    case POSITIVE_FIXNUM_0x34:
-      return 1;
-    case POSITIVE_FIXNUM_0x35:
-      return 1;
-    case POSITIVE_FIXNUM_0x36:
-      return 1;
-    case POSITIVE_FIXNUM_0x37:
-      return 1;
-    case POSITIVE_FIXNUM_0x38:
-      return 1;
-    case POSITIVE_FIXNUM_0x39:
-      return 1;
-    case POSITIVE_FIXNUM_0x3A:
-      return 1;
-    case POSITIVE_FIXNUM_0x3B:
-      return 1;
-    case POSITIVE_FIXNUM_0x3C:
-      return 1;
-    case POSITIVE_FIXNUM_0x3D:
-      return 1;
-    case POSITIVE_FIXNUM_0x3E:
-      return 1;
-    case POSITIVE_FIXNUM_0x3F:
-      return 1;
-
-    case POSITIVE_FIXNUM_0x40:
-      return 1;
-    case POSITIVE_FIXNUM_0x41:
-      return 1;
-    case POSITIVE_FIXNUM_0x42:
-      return 1;
-    case POSITIVE_FIXNUM_0x43:
-      return 1;
-    case POSITIVE_FIXNUM_0x44:
-      return 1;
-    case POSITIVE_FIXNUM_0x45:
-      return 1;
-    case POSITIVE_FIXNUM_0x46:
-      return 1;
-    case POSITIVE_FIXNUM_0x47:
-      return 1;
-    case POSITIVE_FIXNUM_0x48:
-      return 1;
-    case POSITIVE_FIXNUM_0x49:
-      return 1;
-    case POSITIVE_FIXNUM_0x4A:
-      return 1;
-    case POSITIVE_FIXNUM_0x4B:
-      return 1;
-    case POSITIVE_FIXNUM_0x4C:
-      return 1;
-    case POSITIVE_FIXNUM_0x4D:
-      return 1;
-    case POSITIVE_FIXNUM_0x4E:
-      return 1;
-    case POSITIVE_FIXNUM_0x4F:
-      return 1;
-
-    case POSITIVE_FIXNUM_0x50:
-      return 1;
-    case POSITIVE_FIXNUM_0x51:
-      return 1;
-    case POSITIVE_FIXNUM_0x52:
-      return 1;
-    case POSITIVE_FIXNUM_0x53:
-      return 1;
-    case POSITIVE_FIXNUM_0x54:
-      return 1;
-    case POSITIVE_FIXNUM_0x55:
-      return 1;
-    case POSITIVE_FIXNUM_0x56:
-      return 1;
-    case POSITIVE_FIXNUM_0x57:
-      return 1;
-    case POSITIVE_FIXNUM_0x58:
-      return 1;
-    case POSITIVE_FIXNUM_0x59:
-      return 1;
-    case POSITIVE_FIXNUM_0x5A:
-      return 1;
-    case POSITIVE_FIXNUM_0x5B:
-      return 1;
-    case POSITIVE_FIXNUM_0x5C:
-      return 1;
-    case POSITIVE_FIXNUM_0x5D:
-      return 1;
-    case POSITIVE_FIXNUM_0x5E:
-      return 1;
-    case POSITIVE_FIXNUM_0x5F:
-      return 1;
-
-    case POSITIVE_FIXNUM_0x60:
-      return 1;
-    case POSITIVE_FIXNUM_0x61:
-      return 1;
-    case POSITIVE_FIXNUM_0x62:
-      return 1;
-    case POSITIVE_FIXNUM_0x63:
-      return 1;
-    case POSITIVE_FIXNUM_0x64:
-      return 1;
-    case POSITIVE_FIXNUM_0x65:
-      return 1;
-    case POSITIVE_FIXNUM_0x66:
-      return 1;
-    case POSITIVE_FIXNUM_0x67:
-      return 1;
-    case POSITIVE_FIXNUM_0x68:
-      return 1;
-    case POSITIVE_FIXNUM_0x69:
-      return 1;
-    case POSITIVE_FIXNUM_0x6A:
-      return 1;
-    case POSITIVE_FIXNUM_0x6B:
-      return 1;
-    case POSITIVE_FIXNUM_0x6C:
-      return 1;
-    case POSITIVE_FIXNUM_0x6D:
-      return 1;
-    case POSITIVE_FIXNUM_0x6E:
-      return 1;
-    case POSITIVE_FIXNUM_0x6F:
-      return 1;
-
-    case POSITIVE_FIXNUM_0x70:
-      return 1;
-    case POSITIVE_FIXNUM_0x71:
-      return 1;
-    case POSITIVE_FIXNUM_0x72:
-      return 1;
-    case POSITIVE_FIXNUM_0x73:
-      return 1;
-    case POSITIVE_FIXNUM_0x74:
-      return 1;
-    case POSITIVE_FIXNUM_0x75:
-      return 1;
-    case POSITIVE_FIXNUM_0x76:
-      return 1;
-    case POSITIVE_FIXNUM_0x77:
-      return 1;
-    case POSITIVE_FIXNUM_0x78:
-      return 1;
-    case POSITIVE_FIXNUM_0x79:
-      return 1;
-    case POSITIVE_FIXNUM_0x7A:
-      return 1;
-    case POSITIVE_FIXNUM_0x7B:
-      return 1;
-    case POSITIVE_FIXNUM_0x7C:
-      return 1;
-    case POSITIVE_FIXNUM_0x7D:
-      return 1;
-    case POSITIVE_FIXNUM_0x7E:
-      return 1;
-    case POSITIVE_FIXNUM_0x7F:
-      return 1;
-#pragma endregion
-
-#pragma region FIX_MAP 0x80 - 0x8F
-    case FIX_MAP:
-      return 1;
-    case FIX_MAP_0x1:
-      return 1;
-    case FIX_MAP_0x2:
-      return 1;
-    case FIX_MAP_0x3:
-      return 1;
-    case FIX_MAP_0x4:
-      return 1;
-    case FIX_MAP_0x5:
-      return 1;
-    case FIX_MAP_0x6:
-      return 1;
-    case FIX_MAP_0x7:
-      return 1;
-    case FIX_MAP_0x8:
-      return 1;
-    case FIX_MAP_0x9:
-      return 1;
-    case FIX_MAP_0xA:
-      return 1;
-    case FIX_MAP_0xB:
-      return 1;
-    case FIX_MAP_0xC:
-      return 1;
-    case FIX_MAP_0xD:
-      return 1;
-    case FIX_MAP_0xE:
-      return 1;
-    case FIX_MAP_0xF:
-      return 1;
-#pragma endregion
-
-#pragma region FIX_ARRAY 0x90 - 0x9F
-    case FIX_ARRAY:
-      return 1;
-    case FIX_ARRAY_0x1:
-      return 1;
-    case FIX_ARRAY_0x2:
-      return 1;
-    case FIX_ARRAY_0x3:
-      return 1;
-    case FIX_ARRAY_0x4:
-      return 1;
-    case FIX_ARRAY_0x5:
-      return 1;
-    case FIX_ARRAY_0x6:
-      return 1;
-    case FIX_ARRAY_0x7:
-      return 1;
-    case FIX_ARRAY_0x8:
-      return 1;
-    case FIX_ARRAY_0x9:
-      return 1;
-    case FIX_ARRAY_0xA:
-      return 1;
-    case FIX_ARRAY_0xB:
-      return 1;
-    case FIX_ARRAY_0xC:
-      return 1;
-    case FIX_ARRAY_0xD:
-      return 1;
-    case FIX_ARRAY_0xE:
-      return 1;
-    case FIX_ARRAY_0xF:
-      return 1;
-#pragma endregion
-
-#pragma region FIX_STR 0xA0 - 0xBF
-    case FIX_STR:
-      return 1;
-    case FIX_STR_0x01:
-      return 1;
-    case FIX_STR_0x02:
-      return 1;
-    case FIX_STR_0x03:
-      return 1;
-    case FIX_STR_0x04:
-      return 1;
-    case FIX_STR_0x05:
-      return 1;
-    case FIX_STR_0x06:
-      return 1;
-    case FIX_STR_0x07:
-      return 1;
-    case FIX_STR_0x08:
-      return 1;
-    case FIX_STR_0x09:
-      return 1;
-    case FIX_STR_0x0A:
-      return 1;
-    case FIX_STR_0x0B:
-      return 1;
-    case FIX_STR_0x0C:
-      return 1;
-    case FIX_STR_0x0D:
-      return 1;
-    case FIX_STR_0x0E:
-      return 1;
-    case FIX_STR_0x0F:
-      return 1;
-    case FIX_STR_0x10:
-      return 1;
-    case FIX_STR_0x11:
-      return 1;
-    case FIX_STR_0x12:
-      return 1;
-    case FIX_STR_0x13:
-      return 1;
-    case FIX_STR_0x14:
-      return 1;
-    case FIX_STR_0x15:
-      return 1;
-    case FIX_STR_0x16:
-      return 1;
-    case FIX_STR_0x17:
-      return 1;
-    case FIX_STR_0x18:
-      return 1;
-    case FIX_STR_0x19:
-      return 1;
-    case FIX_STR_0x1A:
-      return 1;
-    case FIX_STR_0x1B:
-      return 1;
-    case FIX_STR_0x1C:
-      return 1;
-    case FIX_STR_0x1D:
-      return 1;
-    case FIX_STR_0x1E:
-      return 1;
-    case FIX_STR_0x1F:
-      return 1;
-#pragma endregion
-
-    case NIL:
-      return 1;
-    case NEVER_USED:
-      throw invalid_parse_error();
-    case False:
-      return 1;
-    case True:
-      return 1;
-
-    case BIN8:
-      return 1 + 1;
-    case BIN16:
-      return 1 + 2;
-    case BIN32:
-      return 1 + 4;
-
-    case EXT8:
-      return 1 + 1 + 1;
-    case EXT16:
-      return 1 + 2 + 1;
-    case EXT32:
-      return 1 + 4 + 1;
-
-    case FLOAT:
-      return 1;
-    case DOUBLE:
-      return 1;
-    case UINT8:
-      return 1;
-    case UINT16:
-      return 1;
-    case UINT32:
-      return 1;
-    case UINT64:
-      return 1;
-    case INT8:
-      return 1;
-    case INT16:
-      return 1;
-    case INT32:
-      return 1;
-    case INT64:
-      return 1;
-
-    case FIX_EXT_1:
-      return 1 + 1;
-    case FIX_EXT_2:
-      return 1 + 1;
-    case FIX_EXT_4:
-      return 1 + 1;
-    case FIX_EXT_8:
-      return 1 + 1;
-    case FIX_EXT_16:
-      return 1 + 1;
-
-    case STR8:
-      return 1 + 1;
-    case STR16:
-      return 1 + 2;
-    case STR32:
-      return 1 + 4;
-
-    case ARRAY16:
-      return 1 + 2;
-    case ARRAY32:
-      return 1 + 4;
-    case MAP16:
-      return 1 + 2;
-    case MAP32:
-      return 1 + 4;
-
-#pragma region NEGATIVE_FIXNUM 0xE0 - 0xFF
-    case NEGATIVE_FIXNUM:
-      return 1;
-    case NEGATIVE_FIXNUM_0x1F:
-      return 1;
-    case NEGATIVE_FIXNUM_0x1E:
-      return 1;
-    case NEGATIVE_FIXNUM_0x1D:
-      return 1;
-    case NEGATIVE_FIXNUM_0x1C:
-      return 1;
-    case NEGATIVE_FIXNUM_0x1B:
-      return 1;
-    case NEGATIVE_FIXNUM_0x1A:
-      return 1;
-    case NEGATIVE_FIXNUM_0x19:
-      return 1;
-    case NEGATIVE_FIXNUM_0x18:
-      return 1;
-    case NEGATIVE_FIXNUM_0x17:
-      return 1;
-    case NEGATIVE_FIXNUM_0x16:
-      return 1;
-    case NEGATIVE_FIXNUM_0x15:
-      return 1;
-    case NEGATIVE_FIXNUM_0x14:
-      return 1;
-    case NEGATIVE_FIXNUM_0x13:
-      return 1;
-    case NEGATIVE_FIXNUM_0x12:
-      return 1;
-    case NEGATIVE_FIXNUM_0x11:
-      return 1;
-    case NEGATIVE_FIXNUM_0x10:
-      return 1;
-    case NEGATIVE_FIXNUM_0x0F:
-      return 1;
-    case NEGATIVE_FIXNUM_0x0E:
-      return 1;
-    case NEGATIVE_FIXNUM_0x0D:
-      return 1;
-    case NEGATIVE_FIXNUM_0x0C:
-      return 1;
-    case NEGATIVE_FIXNUM_0x0B:
-      return 1;
-    case NEGATIVE_FIXNUM_0x0A:
-      return 1;
-    case NEGATIVE_FIXNUM_0x09:
-      return 1;
-    case NEGATIVE_FIXNUM_0x08:
-      return 1;
-    case NEGATIVE_FIXNUM_0x07:
-      return 1;
-    case NEGATIVE_FIXNUM_0x06:
-      return 1;
-    case NEGATIVE_FIXNUM_0x05:
-      return 1;
-    case NEGATIVE_FIXNUM_0x04:
-      return 1;
-    case NEGATIVE_FIXNUM_0x03:
-      return 1;
-    case NEGATIVE_FIXNUM_0x02:
-      return 1;
-    case NEGATIVE_FIXNUM_0x01:
-      return 1;
-#pragma endregion
-    }
-
-    throw invalid_parse_error();
+    return body_index_and_size::from_type(type).index;
   }
 
-  int body_size() const {
+  uint32_t body_size() const {
     auto type = static_cast<pack_type>(header());
-    switch (type) {
-#pragma region POSITIVE_FIXNUM 0x00 - 0x7F
-    case POSITIVE_FIXNUM:
-      return 0;
-    case POSITIVE_FIXNUM_0x01:
-      return 0;
-    case POSITIVE_FIXNUM_0x02:
-      return 0;
-    case POSITIVE_FIXNUM_0x03:
-      return 0;
-    case POSITIVE_FIXNUM_0x04:
-      return 0;
-    case POSITIVE_FIXNUM_0x05:
-      return 0;
-    case POSITIVE_FIXNUM_0x06:
-      return 0;
-    case POSITIVE_FIXNUM_0x07:
-      return 0;
-    case POSITIVE_FIXNUM_0x08:
-      return 0;
-    case POSITIVE_FIXNUM_0x09:
-      return 0;
-    case POSITIVE_FIXNUM_0x0A:
-      return 0;
-    case POSITIVE_FIXNUM_0x0B:
-      return 0;
-    case POSITIVE_FIXNUM_0x0C:
-      return 0;
-    case POSITIVE_FIXNUM_0x0D:
-      return 0;
-    case POSITIVE_FIXNUM_0x0E:
-      return 0;
-    case POSITIVE_FIXNUM_0x0F:
-      return 0;
-
-    case POSITIVE_FIXNUM_0x10:
-      return 0;
-    case POSITIVE_FIXNUM_0x11:
-      return 0;
-    case POSITIVE_FIXNUM_0x12:
-      return 0;
-    case POSITIVE_FIXNUM_0x13:
-      return 0;
-    case POSITIVE_FIXNUM_0x14:
-      return 0;
-    case POSITIVE_FIXNUM_0x15:
-      return 0;
-    case POSITIVE_FIXNUM_0x16:
-      return 0;
-    case POSITIVE_FIXNUM_0x17:
-      return 0;
-    case POSITIVE_FIXNUM_0x18:
-      return 0;
-    case POSITIVE_FIXNUM_0x19:
-      return 0;
-    case POSITIVE_FIXNUM_0x1A:
-      return 0;
-    case POSITIVE_FIXNUM_0x1B:
-      return 0;
-    case POSITIVE_FIXNUM_0x1C:
-      return 0;
-    case POSITIVE_FIXNUM_0x1D:
-      return 0;
-    case POSITIVE_FIXNUM_0x1E:
-      return 0;
-    case POSITIVE_FIXNUM_0x1F:
-      return 0;
-
-    case POSITIVE_FIXNUM_0x20:
-      return 0;
-    case POSITIVE_FIXNUM_0x21:
-      return 0;
-    case POSITIVE_FIXNUM_0x22:
-      return 0;
-    case POSITIVE_FIXNUM_0x23:
-      return 0;
-    case POSITIVE_FIXNUM_0x24:
-      return 0;
-    case POSITIVE_FIXNUM_0x25:
-      return 0;
-    case POSITIVE_FIXNUM_0x26:
-      return 0;
-    case POSITIVE_FIXNUM_0x27:
-      return 0;
-    case POSITIVE_FIXNUM_0x28:
-      return 0;
-    case POSITIVE_FIXNUM_0x29:
-      return 0;
-    case POSITIVE_FIXNUM_0x2A:
-      return 0;
-    case POSITIVE_FIXNUM_0x2B:
-      return 0;
-    case POSITIVE_FIXNUM_0x2C:
-      return 0;
-    case POSITIVE_FIXNUM_0x2D:
-      return 0;
-    case POSITIVE_FIXNUM_0x2E:
-      return 0;
-    case POSITIVE_FIXNUM_0x2F:
-      return 0;
-
-    case POSITIVE_FIXNUM_0x30:
-      return 0;
-    case POSITIVE_FIXNUM_0x31:
-      return 0;
-    case POSITIVE_FIXNUM_0x32:
-      return 0;
-    case POSITIVE_FIXNUM_0x33:
-      return 0;
-    case POSITIVE_FIXNUM_0x34:
-      return 0;
-    case POSITIVE_FIXNUM_0x35:
-      return 0;
-    case POSITIVE_FIXNUM_0x36:
-      return 0;
-    case POSITIVE_FIXNUM_0x37:
-      return 0;
-    case POSITIVE_FIXNUM_0x38:
-      return 0;
-    case POSITIVE_FIXNUM_0x39:
-      return 0;
-    case POSITIVE_FIXNUM_0x3A:
-      return 0;
-    case POSITIVE_FIXNUM_0x3B:
-      return 0;
-    case POSITIVE_FIXNUM_0x3C:
-      return 0;
-    case POSITIVE_FIXNUM_0x3D:
-      return 0;
-    case POSITIVE_FIXNUM_0x3E:
-      return 0;
-    case POSITIVE_FIXNUM_0x3F:
-      return 0;
-
-    case POSITIVE_FIXNUM_0x40:
-      return 0;
-    case POSITIVE_FIXNUM_0x41:
-      return 0;
-    case POSITIVE_FIXNUM_0x42:
-      return 0;
-    case POSITIVE_FIXNUM_0x43:
-      return 0;
-    case POSITIVE_FIXNUM_0x44:
-      return 0;
-    case POSITIVE_FIXNUM_0x45:
-      return 0;
-    case POSITIVE_FIXNUM_0x46:
-      return 0;
-    case POSITIVE_FIXNUM_0x47:
-      return 0;
-    case POSITIVE_FIXNUM_0x48:
-      return 0;
-    case POSITIVE_FIXNUM_0x49:
-      return 0;
-    case POSITIVE_FIXNUM_0x4A:
-      return 0;
-    case POSITIVE_FIXNUM_0x4B:
-      return 0;
-    case POSITIVE_FIXNUM_0x4C:
-      return 0;
-    case POSITIVE_FIXNUM_0x4D:
-      return 0;
-    case POSITIVE_FIXNUM_0x4E:
-      return 0;
-    case POSITIVE_FIXNUM_0x4F:
-      return 0;
-
-    case POSITIVE_FIXNUM_0x50:
-      return 0;
-    case POSITIVE_FIXNUM_0x51:
-      return 0;
-    case POSITIVE_FIXNUM_0x52:
-      return 0;
-    case POSITIVE_FIXNUM_0x53:
-      return 0;
-    case POSITIVE_FIXNUM_0x54:
-      return 0;
-    case POSITIVE_FIXNUM_0x55:
-      return 0;
-    case POSITIVE_FIXNUM_0x56:
-      return 0;
-    case POSITIVE_FIXNUM_0x57:
-      return 0;
-    case POSITIVE_FIXNUM_0x58:
-      return 0;
-    case POSITIVE_FIXNUM_0x59:
-      return 0;
-    case POSITIVE_FIXNUM_0x5A:
-      return 0;
-    case POSITIVE_FIXNUM_0x5B:
-      return 0;
-    case POSITIVE_FIXNUM_0x5C:
-      return 0;
-    case POSITIVE_FIXNUM_0x5D:
-      return 0;
-    case POSITIVE_FIXNUM_0x5E:
-      return 0;
-    case POSITIVE_FIXNUM_0x5F:
-      return 0;
-
-    case POSITIVE_FIXNUM_0x60:
-      return 0;
-    case POSITIVE_FIXNUM_0x61:
-      return 0;
-    case POSITIVE_FIXNUM_0x62:
-      return 0;
-    case POSITIVE_FIXNUM_0x63:
-      return 0;
-    case POSITIVE_FIXNUM_0x64:
-      return 0;
-    case POSITIVE_FIXNUM_0x65:
-      return 0;
-    case POSITIVE_FIXNUM_0x66:
-      return 0;
-    case POSITIVE_FIXNUM_0x67:
-      return 0;
-    case POSITIVE_FIXNUM_0x68:
-      return 0;
-    case POSITIVE_FIXNUM_0x69:
-      return 0;
-    case POSITIVE_FIXNUM_0x6A:
-      return 0;
-    case POSITIVE_FIXNUM_0x6B:
-      return 0;
-    case POSITIVE_FIXNUM_0x6C:
-      return 0;
-    case POSITIVE_FIXNUM_0x6D:
-      return 0;
-    case POSITIVE_FIXNUM_0x6E:
-      return 0;
-    case POSITIVE_FIXNUM_0x6F:
-      return 0;
-
-    case POSITIVE_FIXNUM_0x70:
-      return 0;
-    case POSITIVE_FIXNUM_0x71:
-      return 0;
-    case POSITIVE_FIXNUM_0x72:
-      return 0;
-    case POSITIVE_FIXNUM_0x73:
-      return 0;
-    case POSITIVE_FIXNUM_0x74:
-      return 0;
-    case POSITIVE_FIXNUM_0x75:
-      return 0;
-    case POSITIVE_FIXNUM_0x76:
-      return 0;
-    case POSITIVE_FIXNUM_0x77:
-      return 0;
-    case POSITIVE_FIXNUM_0x78:
-      return 0;
-    case POSITIVE_FIXNUM_0x79:
-      return 0;
-    case POSITIVE_FIXNUM_0x7A:
-      return 0;
-    case POSITIVE_FIXNUM_0x7B:
-      return 0;
-    case POSITIVE_FIXNUM_0x7C:
-      return 0;
-    case POSITIVE_FIXNUM_0x7D:
-      return 0;
-    case POSITIVE_FIXNUM_0x7E:
-      return 0;
-    case POSITIVE_FIXNUM_0x7F:
-      return 0;
-#pragma endregion
-
-#pragma region FIX_MAP 0x80 - 0x8F
-    case FIX_MAP:
-      throw no_size_parse_error();
-    case FIX_MAP_0x1:
-      throw no_size_parse_error();
-    case FIX_MAP_0x2:
-      throw no_size_parse_error();
-    case FIX_MAP_0x3:
-      throw no_size_parse_error();
-    case FIX_MAP_0x4:
-      throw no_size_parse_error();
-    case FIX_MAP_0x5:
-      throw no_size_parse_error();
-    case FIX_MAP_0x6:
-      throw no_size_parse_error();
-    case FIX_MAP_0x7:
-      throw no_size_parse_error();
-    case FIX_MAP_0x8:
-      throw no_size_parse_error();
-    case FIX_MAP_0x9:
-      throw no_size_parse_error();
-    case FIX_MAP_0xA:
-      throw no_size_parse_error();
-    case FIX_MAP_0xB:
-      throw no_size_parse_error();
-    case FIX_MAP_0xC:
-      throw no_size_parse_error();
-    case FIX_MAP_0xD:
-      throw no_size_parse_error();
-    case FIX_MAP_0xE:
-      throw no_size_parse_error();
-    case FIX_MAP_0xF:
-      throw no_size_parse_error();
-#pragma endregion
-
-#pragma region FIX_ARRAY 0x90 - 0x9F
-    case FIX_ARRAY:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x1:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x2:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x3:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x4:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x5:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x6:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x7:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x8:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0x9:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0xA:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0xB:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0xC:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0xD:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0xE:
-      throw no_size_parse_error();
-    case FIX_ARRAY_0xF:
-      throw no_size_parse_error();
-#pragma endregion
-
-#pragma region FIX_STR 0xA0 - 0xBF
-    case FIX_STR:
-      return 0;
-    case FIX_STR_0x01:
-      return 1;
-    case FIX_STR_0x02:
-      return 2;
-    case FIX_STR_0x03:
-      return 3;
-    case FIX_STR_0x04:
-      return 4;
-    case FIX_STR_0x05:
-      return 5;
-    case FIX_STR_0x06:
-      return 6;
-    case FIX_STR_0x07:
-      return 7;
-    case FIX_STR_0x08:
-      return 8;
-    case FIX_STR_0x09:
-      return 9;
-    case FIX_STR_0x0A:
-      return 10;
-    case FIX_STR_0x0B:
-      return 11;
-    case FIX_STR_0x0C:
-      return 12;
-    case FIX_STR_0x0D:
-      return 13;
-    case FIX_STR_0x0E:
-      return 14;
-    case FIX_STR_0x0F:
-      return 15;
-    case FIX_STR_0x10:
-      return 16;
-    case FIX_STR_0x11:
-      return 17;
-    case FIX_STR_0x12:
-      return 18;
-    case FIX_STR_0x13:
-      return 19;
-    case FIX_STR_0x14:
-      return 20;
-    case FIX_STR_0x15:
-      return 21;
-    case FIX_STR_0x16:
-      return 22;
-    case FIX_STR_0x17:
-      return 23;
-    case FIX_STR_0x18:
-      return 24;
-    case FIX_STR_0x19:
-      return 25;
-    case FIX_STR_0x1A:
-      return 26;
-    case FIX_STR_0x1B:
-      return 27;
-    case FIX_STR_0x1C:
-      return 28;
-    case FIX_STR_0x1D:
-      return 29;
-    case FIX_STR_0x1E:
-      return 30;
-    case FIX_STR_0x1F:
-      return 31;
-#pragma endregion
-
-    case NIL:
-      return 0;
-    case NEVER_USED:
-      throw invalid_parse_error();
-    case False:
-      return 0;
-    case True:
-      return 0;
-
-    case BIN8:
-      return body_number<std::uint8_t>();
-    case BIN16:
-      return body_number<std::uint16_t>();
-    case BIN32:
-      return body_number<std::uint32_t>();
-
-    case EXT8:
-      return body_number<std::uint8_t>();
-    case EXT16:
-      return body_number<std::uint16_t>();
-    case EXT32:
-      return body_number<std::uint32_t>();
-
-    case FLOAT:
-      return 4;
-    case DOUBLE:
-      return 8;
-    case UINT8:
-      return 1;
-    case UINT16:
-      return 2;
-    case UINT32:
-      return 4;
-    case UINT64:
-      return 8;
-    case INT8:
-      return 1;
-    case INT16:
-      return 2;
-    case INT32:
-      return 4;
-    case INT64:
-      return 8;
-
-    case FIX_EXT_1:
-      return 1;
-    case FIX_EXT_2:
-      return 2;
-    case FIX_EXT_4:
-      return 4;
-    case FIX_EXT_8:
-      return 8;
-    case FIX_EXT_16:
-      return 16;
-
-    case STR8:
-      return body_number<std::uint8_t>();
-    case STR16:
-      return body_number<std::uint16_t>();
-    case STR32:
-      return body_number<std::uint32_t>();
-
-    case ARRAY16:
-      throw not_implemented_parse_error();
-    case ARRAY32:
-      throw not_implemented_parse_error();
-    case MAP16:
-      throw not_implemented_parse_error();
-    case MAP32:
-      throw not_implemented_parse_error();
-
-#pragma region NEGATIVE_FIXNUM 0xE0 - 0xFF
-    case NEGATIVE_FIXNUM:
-      return 0;
-    case NEGATIVE_FIXNUM_0x1F:
-      return 0;
-    case NEGATIVE_FIXNUM_0x1E:
-      return 0;
-    case NEGATIVE_FIXNUM_0x1D:
-      return 0;
-    case NEGATIVE_FIXNUM_0x1C:
-      return 0;
-    case NEGATIVE_FIXNUM_0x1B:
-      return 0;
-    case NEGATIVE_FIXNUM_0x1A:
-      return 0;
-    case NEGATIVE_FIXNUM_0x19:
-      return 0;
-    case NEGATIVE_FIXNUM_0x18:
-      return 0;
-    case NEGATIVE_FIXNUM_0x17:
-      return 0;
-    case NEGATIVE_FIXNUM_0x16:
-      return 0;
-    case NEGATIVE_FIXNUM_0x15:
-      return 0;
-    case NEGATIVE_FIXNUM_0x14:
-      return 0;
-    case NEGATIVE_FIXNUM_0x13:
-      return 0;
-    case NEGATIVE_FIXNUM_0x12:
-      return 0;
-    case NEGATIVE_FIXNUM_0x11:
-      return 0;
-    case NEGATIVE_FIXNUM_0x10:
-      return 0;
-    case NEGATIVE_FIXNUM_0x0F:
-      return 0;
-    case NEGATIVE_FIXNUM_0x0E:
-      return 0;
-    case NEGATIVE_FIXNUM_0x0D:
-      return 0;
-    case NEGATIVE_FIXNUM_0x0C:
-      return 0;
-    case NEGATIVE_FIXNUM_0x0B:
-      return 0;
-    case NEGATIVE_FIXNUM_0x0A:
-      return 0;
-    case NEGATIVE_FIXNUM_0x09:
-      return 0;
-    case NEGATIVE_FIXNUM_0x08:
-      return 0;
-    case NEGATIVE_FIXNUM_0x07:
-      return 0;
-    case NEGATIVE_FIXNUM_0x06:
-      return 0;
-    case NEGATIVE_FIXNUM_0x05:
-      return 0;
-    case NEGATIVE_FIXNUM_0x04:
-      return 0;
-    case NEGATIVE_FIXNUM_0x03:
-      return 0;
-    case NEGATIVE_FIXNUM_0x02:
-      return 0;
-    case NEGATIVE_FIXNUM_0x01:
-      return 0;
-#pragma endregion
-    }
-
-    throw invalid_parse_error();
+    return body_index_and_size::from_type(type).size(m_p, m_size);
   }
 
 public:
@@ -1893,11 +1195,11 @@ public:
     auto type = static_cast<pack_type>(header());
     switch (type) {
     case pack_type::STR32:
-      return get_string(value, 1 + 4, body_number<std::uint32_t>());
+      return get_string(value, 1 + 4, body_number<std::uint32_t>(m_p, m_size));
     case pack_type::STR16:
-      return get_string(value, 1 + 2, body_number<std::uint16_t>());
+      return get_string(value, 1 + 2, body_number<std::uint16_t>(m_p, m_size));
     case pack_type::STR8:
-      return get_string(value, 1 + 1, body_number<std::uint8_t>());
+      return get_string(value, 1 + 1, body_number<std::uint8_t>(m_p, m_size));
     case pack_type::FIX_STR:
       return get_string(value, 1, 0);
     case pack_type::FIX_STR_0x01:
@@ -1978,40 +1280,40 @@ public:
     switch (type) {
     case pack_type::BIN32: {
       auto begin = m_p + 1 + 4;
-      auto n = body_number<std::uint32_t>();
+      auto n = body_number<std::uint32_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(1 + 4 + n);
     }
 
     case pack_type::BIN16: {
       auto begin = m_p + 1 + 2;
-      auto n = body_number<std::uint16_t>();
+      auto n = body_number<std::uint16_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(1 + 2 + n);
     }
     case pack_type::BIN8: {
       auto begin = m_p + 1 + 1;
-      auto n = body_number<std::uint8_t>();
+      auto n = body_number<std::uint8_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(1 + 1 + n);
     }
 
     case pack_type::EXT32: {
       auto begin = m_p + 2 + 4;
-      auto n = body_number<std::uint32_t>();
+      auto n = body_number<std::uint32_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(2 + 4 + n);
     }
 
     case pack_type::EXT16: {
       auto begin = m_p + 2 + 2;
-      auto n = body_number<std::uint16_t>();
+      auto n = body_number<std::uint16_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(2 + 2 + n);
     }
     case pack_type::EXT8: {
       auto begin = m_p + 2 + 1;
-      auto n = body_number<std::uint8_t>();
+      auto n = body_number<std::uint8_t>(m_p, m_size);
       value = std::string_view((char *)begin, n);
       return advance(2 + 1 + n);
     }
@@ -2120,31 +1422,31 @@ public:
       value = m_p[1];
       return advance(1 + 1);
     case pack_type::UINT16:
-      value = body_number<std::uint16_t>();
+      value = body_number<std::uint16_t>(m_p, m_size);
       return advance(1 + 2);
     case pack_type::UINT32:
-      value = body_number<std::uint32_t>();
+      value = body_number<std::uint32_t>(m_p, m_size);
       return advance(1 + 4);
     case pack_type::UINT64:
-      value = body_number<std::uint64_t>();
+      value = body_number<std::uint64_t>(m_p, m_size);
       return advance(1 + 8);
     case pack_type::INT8:
       value = m_p[1];
       return advance(1 + 1);
     case pack_type::INT16:
-      value = body_number<std::int16_t>();
+      value = body_number<std::int16_t>(m_p, m_size);
       return advance(1 + 2);
     case pack_type::INT32:
-      value = body_number<std::int32_t>();
+      value = body_number<std::int32_t>(m_p, m_size);
       return advance(1 + 4);
     case pack_type::INT64:
-      value = body_number<std::int64_t>();
+      value = body_number<std::int64_t>(m_p, m_size);
       return advance(1 + 8);
     case pack_type::FLOAT:
-      value = body_number<float>();
+      value = body_number<float>(m_p, m_size);
       return advance(1 + 4);
     case pack_type::DOUBLE:
-      value = body_number<double>();
+      value = body_number<double>(m_p, m_size);
       return advance(1 + 8);
     case pack_type::NEGATIVE_FIXNUM:
       value = -32;
@@ -2638,9 +1940,9 @@ public:
     case pack_type::FIX_ARRAY_0xF:
       return 15;
     case pack_type::ARRAY16:
-      return body_number<std::uint16_t>();
+      return body_number<std::uint16_t>(m_p, m_size);
     case pack_type::ARRAY32:
-      return body_number<std::uint32_t>();
+      return body_number<std::uint32_t>(m_p, m_size);
     case pack_type::FIX_MAP:
       return 0;
     case pack_type::FIX_MAP_0x1:
@@ -2674,9 +1976,9 @@ public:
     case pack_type::FIX_MAP_0xF:
       return 15;
     case pack_type::MAP16:
-      return body_number<std::uint16_t>();
+      return body_number<std::uint16_t>(m_p, m_size);
     case pack_type::MAP32:
-      return body_number<std::uint32_t>();
+      return body_number<std::uint32_t>(m_p, m_size);
     }
 
     throw type_parse_error();
