@@ -422,12 +422,28 @@ template <typename T> T body_number(const uint8_t *m_p, int m_size) {
   return T();
 }
 
+enum class parse_status {
+  ok,
+  empty,
+  lack,
+  invalid,
+};
+
+template <typename T> struct parse_result {
+  parse_status status;
+  T value;
+  bool is_ok() const { return status == parse_status::ok; }
+};
+template <typename T> parse_result<T> OK(const T &value) {
+  return {parse_status::ok, value};
+}
+
 struct body_index_and_size {
   int index;
 
   uint32_t (*size)(const uint8_t *p, int size);
 
-  static constexpr body_index_and_size from_type(pack_type t) {
+  static constexpr parse_result<body_index_and_size> from_type(pack_type t) {
     switch (t) {
 #pragma region POSITIVE_FIXNUM 0x00 - 0x7F
     case POSITIVE_FIXNUM:
@@ -565,7 +581,7 @@ struct body_index_and_size {
     case POSITIVE_FIXNUM_0x7D:
     case POSITIVE_FIXNUM_0x7E:
     case POSITIVE_FIXNUM_0x7F:
-      return {1, return_n<0>};
+      return OK(body_index_and_size{1, return_n<0>});
 #pragma endregion
 
 #pragma region FIX_MAP 0x80 - 0x8F
@@ -585,7 +601,7 @@ struct body_index_and_size {
     case FIX_MAP_0xD:
     case FIX_MAP_0xE:
     case FIX_MAP_0xF:
-      return {1, no_size_parse_error};
+      return OK(body_index_and_size{1, no_size_parse_error});
 #pragma endregion
 
 #pragma region FIX_ARRAY 0x90 - 0x9F
@@ -605,164 +621,167 @@ struct body_index_and_size {
     case FIX_ARRAY_0xD:
     case FIX_ARRAY_0xE:
     case FIX_ARRAY_0xF:
-      return {1, no_size_parse_error};
+      return OK(body_index_and_size{1, no_size_parse_error});
 #pragma endregion
 
 #pragma region FIX_STR 0xA0 - 0xBF
     case FIX_STR:
-      return {1, return_n<0>};
+      return OK(body_index_and_size{1, return_n<0>});
     case FIX_STR_0x01:
-      return {1, return_n<1>};
+      return OK(body_index_and_size{1, return_n<1>});
     case FIX_STR_0x02:
-      return {1, return_n<2>};
+      return OK(body_index_and_size{1, return_n<2>});
     case FIX_STR_0x03:
-      return {1, return_n<3>};
+      return OK(body_index_and_size{1, return_n<3>});
     case FIX_STR_0x04:
-      return {1, return_n<4>};
+      return OK(body_index_and_size{1, return_n<4>});
     case FIX_STR_0x05:
-      return {1, return_n<5>};
+      return OK(body_index_and_size{1, return_n<5>});
     case FIX_STR_0x06:
-      return {1, return_n<6>};
+      return OK(body_index_and_size{1, return_n<6>});
     case FIX_STR_0x07:
-      return {1, return_n<7>};
+      return OK(body_index_and_size{1, return_n<7>});
     case FIX_STR_0x08:
-      return {1, return_n<8>};
+      return OK(body_index_and_size{1, return_n<8>});
     case FIX_STR_0x09:
-      return {1, return_n<9>};
+      return OK(body_index_and_size{1, return_n<9>});
     case FIX_STR_0x0A:
-      return {1, return_n<10>};
+      return OK(body_index_and_size{1, return_n<10>});
     case FIX_STR_0x0B:
-      return {1, return_n<11>};
+      return OK(body_index_and_size{1, return_n<11>});
     case FIX_STR_0x0C:
-      return {1, return_n<12>};
+      return OK(body_index_and_size{1, return_n<12>});
     case FIX_STR_0x0D:
-      return {1, return_n<13>};
+      return OK(body_index_and_size{1, return_n<13>});
     case FIX_STR_0x0E:
-      return {1, return_n<14>};
+      return OK(body_index_and_size{1, return_n<14>});
     case FIX_STR_0x0F:
-      return {1, return_n<15>};
+      return OK(body_index_and_size{1, return_n<15>});
     case FIX_STR_0x10:
-      return {1, return_n<16>};
+      return OK(body_index_and_size{1, return_n<16>});
     case FIX_STR_0x11:
-      return {1, return_n<17>};
+      return OK(body_index_and_size{1, return_n<17>});
     case FIX_STR_0x12:
-      return {1, return_n<18>};
+      return OK(body_index_and_size{1, return_n<18>});
     case FIX_STR_0x13:
-      return {1, return_n<19>};
+      return OK(body_index_and_size{1, return_n<19>});
     case FIX_STR_0x14:
-      return {1, return_n<20>};
+      return OK(body_index_and_size{1, return_n<20>});
     case FIX_STR_0x15:
-      return {1, return_n<21>};
+      return OK(body_index_and_size{1, return_n<21>});
     case FIX_STR_0x16:
-      return {1, return_n<22>};
+      return OK(body_index_and_size{1, return_n<22>});
     case FIX_STR_0x17:
-      return {1, return_n<23>};
+      return OK(body_index_and_size{1, return_n<23>});
     case FIX_STR_0x18:
-      return {1, return_n<24>};
+      return OK(body_index_and_size{1, return_n<24>});
     case FIX_STR_0x19:
-      return {1, return_n<25>};
+      return OK(body_index_and_size{1, return_n<25>});
     case FIX_STR_0x1A:
-      return {1, return_n<26>};
+      return OK(body_index_and_size{1, return_n<26>});
     case FIX_STR_0x1B:
-      return {1, return_n<27>};
+      return OK(body_index_and_size{1, return_n<27>});
     case FIX_STR_0x1C:
-      return {1, return_n<28>};
+      return OK(body_index_and_size{1, return_n<28>});
     case FIX_STR_0x1D:
-      return {1, return_n<29>};
+      return OK(body_index_and_size{1, return_n<29>});
     case FIX_STR_0x1E:
-      return {1, return_n<30>};
+      return OK(body_index_and_size{1, return_n<30>});
     case FIX_STR_0x1F:
-      return {1, return_n<31>};
+      return OK(body_index_and_size{1, return_n<31>});
 #pragma endregion
 
     case NIL:
-      return {1, return_n<0>};
+      return OK(body_index_and_size{1, return_n<0>});
     case NEVER_USED:
-      return {-1, no_size_parse_error};
+      return {parse_status::invalid};
     case False:
-      return {1, return_n<0>};
+      return OK(body_index_and_size{1, return_n<0>});
     case True:
-      return {1, return_n<0>};
+      return OK(body_index_and_size{1, return_n<0>});
 
     case BIN8:
-      return {1 + 1, [](auto p, int size) -> uint32_t {
-                return body_number<uint8_t>(p, size);
-              }};
+      return OK(body_index_and_size{1 + 1, [](auto p, int size) -> uint32_t {
+                                      return body_number<uint8_t>(p, size);
+                                    }});
     case BIN16:
-      return {1 + 2, [](auto p, int size) -> uint32_t {
-                return body_number<uint16_t>(p, size);
-              }};
+      return OK(body_index_and_size{1 + 2, [](auto p, int size) -> uint32_t {
+                                      return body_number<uint16_t>(p, size);
+                                    }});
     case BIN32:
-      return {1 + 4, [](auto p, int size) -> uint32_t {
-                return body_number<uint32_t>(p, size);
-              }};
+      return OK(body_index_and_size{1 + 4, [](auto p, int size) -> uint32_t {
+                                      return body_number<uint32_t>(p, size);
+                                    }});
 
     case EXT8:
-      return {1 + 1 + 1, [](auto p, int size) -> uint32_t {
-                return body_number<uint8_t>(p, size);
-              }};
+      return OK(
+          body_index_and_size{1 + 1 + 1, [](auto p, int size) -> uint32_t {
+                                return body_number<uint8_t>(p, size);
+                              }});
     case EXT16:
-      return {1 + 2 + 1, [](auto p, int size) -> uint32_t {
-                return body_number<uint16_t>(p, size);
-              }};
+      return OK(
+          body_index_and_size{1 + 2 + 1, [](auto p, int size) -> uint32_t {
+                                return body_number<uint16_t>(p, size);
+                              }});
     case EXT32:
-      return {1 + 4 + 1, [](auto p, int size) -> uint32_t {
-                return body_number<uint32_t>(p, size);
-              }};
+      return OK(
+          body_index_and_size{1 + 4 + 1, [](auto p, int size) -> uint32_t {
+                                return body_number<uint32_t>(p, size);
+                              }});
 
     case FLOAT:
-      return {1, return_n<4>};
+      return OK(body_index_and_size{1, return_n<4>});
     case DOUBLE:
-      return {1, return_n<8>};
+      return OK(body_index_and_size{1, return_n<8>});
     case UINT8:
-      return {1, return_n<1>};
+      return OK(body_index_and_size{1, return_n<1>});
     case UINT16:
-      return {1, return_n<2>};
+      return OK(body_index_and_size{1, return_n<2>});
     case UINT32:
-      return {1, return_n<4>};
+      return OK(body_index_and_size{1, return_n<4>});
     case UINT64:
-      return {1, return_n<8>};
+      return OK(body_index_and_size{1, return_n<8>});
     case INT8:
-      return {1, return_n<1>};
+      return OK(body_index_and_size{1, return_n<1>});
     case INT16:
-      return {1, return_n<2>};
+      return OK(body_index_and_size{1, return_n<2>});
     case INT32:
-      return {1, return_n<4>};
+      return OK(body_index_and_size{1, return_n<4>});
     case INT64:
-      return {1, return_n<8>};
+      return OK(body_index_and_size{1, return_n<8>});
 
     case FIX_EXT_1:
-      return {1 + 1, return_n<1>};
+      return OK(body_index_and_size{1 + 1, return_n<1>});
     case FIX_EXT_2:
-      return {1 + 1, return_n<2>};
+      return OK(body_index_and_size{1 + 1, return_n<2>});
     case FIX_EXT_4:
-      return {1 + 1, return_n<4>};
+      return OK(body_index_and_size{1 + 1, return_n<4>});
     case FIX_EXT_8:
-      return {1 + 1, return_n<8>};
+      return OK(body_index_and_size{1 + 1, return_n<8>});
     case FIX_EXT_16:
-      return {1 + 1, return_n<16>};
+      return OK(body_index_and_size{1 + 1, return_n<16>});
 
     case STR8:
-      return {1 + 1, [](auto p, int size) -> uint32_t {
-                return body_number<uint8_t>(p, size);
-              }};
+      return OK(body_index_and_size{1 + 1, [](auto p, int size) -> uint32_t {
+                                      return body_number<uint8_t>(p, size);
+                                    }});
     case STR16:
-      return {1 + 2, [](auto p, int size) -> uint32_t {
-                return body_number<uint16_t>(p, size);
-              }};
+      return OK(body_index_and_size{1 + 2, [](auto p, int size) -> uint32_t {
+                                      return body_number<uint16_t>(p, size);
+                                    }});
     case STR32:
-      return {1 + 4, [](auto p, int size) -> uint32_t {
-                return body_number<uint32_t>(p, size);
-              }};
+      return OK(body_index_and_size{1 + 4, [](auto p, int size) -> uint32_t {
+                                      return body_number<uint32_t>(p, size);
+                                    }});
 
     case ARRAY16:
-      return {1 + 2, no_size_parse_error};
+      return OK(body_index_and_size{1 + 2, no_size_parse_error});
     case ARRAY32:
-      return {1 + 4, no_size_parse_error};
+      return OK(body_index_and_size{1 + 4, no_size_parse_error});
     case MAP16:
-      return {1 + 2, no_size_parse_error};
+      return OK(body_index_and_size{1 + 2, no_size_parse_error});
     case MAP32:
-      return {1 + 4, no_size_parse_error};
+      return OK(body_index_and_size{1 + 4, no_size_parse_error});
 
 #pragma region NEGATIVE_FIXNUM 0xE0 - 0xFF
     case NEGATIVE_FIXNUM:
@@ -797,11 +816,11 @@ struct body_index_and_size {
     case NEGATIVE_FIXNUM_0x03:
     case NEGATIVE_FIXNUM_0x02:
     case NEGATIVE_FIXNUM_0x01:
-      return {1, 0};
+      return OK(body_index_and_size{1, 0});
 #pragma endregion
 
     default:
-      return {-1, no_size_parse_error};
+      return {parse_status::invalid};
     }
   }
 };
@@ -1045,10 +1064,11 @@ public:
 
 class parser {
   const std::uint8_t *m_p = nullptr;
-  inline std::uint8_t header() const {
-    if (m_size < 1)
-      throw empty_parse_error();
-    return m_p[0];
+  inline parse_result<pack_type> header() const {
+    if (m_size < 1) {
+      return {parse_status::empty};
+    }
+    return OK(static_cast<pack_type>(m_p[0]));
   }
   int m_size = -1;
 
@@ -1092,8 +1112,8 @@ public:
       os << '[';
 
       auto item_count = count();
-      auto type = static_cast<pack_type>(header());
-      auto offset = body_index_and_size::from_type(type).index;
+      auto type = header().value;
+      auto offset = body_index_and_size::from_type(type).value.index;
       auto current = parser(m_p + offset, m_size - offset);
       for (int i = 0; i < item_count; ++i) {
         if (i > 0) {
@@ -1112,8 +1132,8 @@ public:
       os << '{';
 
       auto item_count = count();
-      auto type = static_cast<pack_type>(header());
-      auto offset = body_index_and_size::from_type(type).index;
+      auto type = header().value;
+      auto offset = body_index_and_size::from_type(type).value.index;
       auto current = parser(m_p + offset, m_size - offset);
       for (int i = 0; i < item_count; ++i) {
         if (i > 0) {
@@ -1150,8 +1170,8 @@ public:
       } else if (is_string()) {
         os << '"' << get_string() << '"';
       } else if (is_binary()) {
-        auto type = static_cast<pack_type>(header());
-        auto body = body_index_and_size::from_type(type);
+        auto type = header().value;
+        auto body = body_index_and_size::from_type(type).value;
         os << "[bin:" << body.size(m_p, m_size) << "bytes]";
       } else {
         throw invalid_parse_error();
@@ -1161,7 +1181,7 @@ public:
 
 #pragma region leaf
   parser get_bool(bool &value) const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     if (type == pack_type::True)
       value = true;
     else if (type == pack_type::False)
@@ -1186,7 +1206,7 @@ private:
 
 public:
   parser get_string(std::string_view &value) const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
     case pack_type::STR32:
       return get_string(value, 1 + 4, body_number<std::uint32_t>(m_p, m_size));
@@ -1270,7 +1290,7 @@ public:
   }
 
   parser get_binary_view(std::string_view &value) const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
     case pack_type::BIN32: {
       auto begin = m_p + 1 + 4;
@@ -1373,7 +1393,7 @@ public:
   std::tuple<char, std::string_view> get_ext() const {
     std::string_view bytes;
     char type;
-    switch (header()) {
+    switch (header().value) {
     case FIX_EXT_1:
     case FIX_EXT_2:
     case FIX_EXT_4:
@@ -1404,7 +1424,7 @@ public:
   }
 
   template <typename T> parser get_number(T &value) const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     if (type <= 0x7f) {
       // small int(0 - 127)
       value = type;
@@ -1550,17 +1570,17 @@ public:
   }
 
   bool is_nil() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     return type == pack_type::NIL;
   }
 
   bool is_bool() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     return type == pack_type::True || type == pack_type::False;
   }
 
   bool is_number() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
 #pragma region POSITIVE_FIXNUM 0x00 - 0x7F
     case POSITIVE_FIXNUM:
@@ -1752,7 +1772,7 @@ public:
   }
 
   bool is_binary() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
     case pack_type::BIN8:
     case pack_type::BIN16:
@@ -1764,7 +1784,7 @@ public:
   }
 
   bool is_string() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
     case pack_type::STR32:
       return true;
@@ -1845,7 +1865,7 @@ public:
 
 #pragma region array or map
   bool is_array() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
     case pack_type::FIX_ARRAY:
     case pack_type::FIX_ARRAY_0x1:
@@ -1872,7 +1892,7 @@ public:
   }
 
   bool is_map() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
     case pack_type::FIX_MAP:
     case pack_type::FIX_MAP_0x1:
@@ -1899,7 +1919,7 @@ public:
   }
 
   int count() const {
-    auto type = static_cast<pack_type>(header());
+    auto type = header().value;
     switch (type) {
     case pack_type::FIX_ARRAY:
       return 0;
@@ -1979,8 +1999,8 @@ public:
   }
 
   parser operator[](int index) const {
-    auto type = static_cast<pack_type>(header());
-    auto offset = body_index_and_size::from_type(type).index;
+    auto type = header().value;
+    auto offset = body_index_and_size::from_type(type).value.index;
     auto current = parser(m_p + offset, m_size - offset);
     for (int i = 0; i < index; ++i) {
       current = current.next();
@@ -1990,8 +2010,8 @@ public:
 
   // string key accessor for map
   parser operator[](const std::string &key) const {
-    auto type = static_cast<pack_type>(header());
-    auto offset = body_index_and_size::from_type(type).index;
+    auto type = header().value;
+    auto offset = body_index_and_size::from_type(type).value.index;
     auto current = parser(m_p + offset, m_size - offset);
     auto item_count = count();
     for (int i = 0; i < item_count; ++i) {
@@ -2014,10 +2034,12 @@ public:
       throw empty_parse_error();
     }
     auto type = static_cast<pack_type>(m_p[0]);
-    auto body = body_index_and_size::from_type(type);
-    if (body.index < 0) {
+    auto _body = body_index_and_size::from_type(type);
+    if(!_body.is_ok())
+    {
       throw invalid_parse_error();
     }
+    auto body = _body.value;
 
     if (is_array()) {
       auto offset = body.index;
