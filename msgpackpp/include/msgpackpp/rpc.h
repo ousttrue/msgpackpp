@@ -249,6 +249,7 @@ inline std::ostream &operator<<(std::ostream &os, const func_call &request) {
 
 enum class rpc_errors {
   success,
+  stream_error,
   error_dispatcher_no_handler,
   error_params_not_array,
   error_params_too_many,
@@ -257,7 +258,7 @@ enum class rpc_errors {
   error_not_implemented,
   error_self_pointer_is_null,
   no_request_for_response,
-  invalid_rpc,
+  invalid_format,
 };
 
 using rpc_scope = status_scope<rpc_errors, rpc_errors::success>;
@@ -325,31 +326,28 @@ public:
     m_handlerMap.insert(std::make_pair(method, proc));
   }
 
-  void on_receive(const uint8_t *data, size_t size) {
+  void on_receive(const uint8_t *data, size_t size) noexcept {
     std::copy(data, data + size, std::back_inserter(m_read_buffer));
 
     auto msg =
         msgpackpp::parser(m_read_buffer.data(), (int)m_read_buffer.size());
     while (true) {
       auto current = msg;
-      try {
-        auto _msg = msg.next();
-        if (_msg.is_ok()) {
-          msg = _msg;
-          on_message(current);
-        } else {
-          if (_msg.status == parse_status::empty ||
-              _msg.status == parse_status::lack) {
-            // next
-            break;
-          } else {
-            std::cerr << "parse error" << std::endl;
-            throw std::runtime_error("parse error");
-          }
+      auto _msg = msg.next();
+      if (_msg.is_ok()) {
+        msg = _msg;
+        auto result = on_message(current);
+        if (!result.is_ok()) {
+          m_on_rpc_error(result.status, msg);
         }
-      } catch (const std::runtime_error &e) {
-        std::cerr << e.what() << std::endl;
-        throw;
+      } else {
+        if (_msg.status == parse_status::empty ||
+            _msg.status == parse_status::lack) {
+          // next
+          break;
+        } else {
+          m_on_rpc_error(rpc_errors::stream_error, {});
+        }
       }
     }
     auto d = msg.data() - m_read_buffer.data();
@@ -359,14 +357,23 @@ public:
   }
 
 private:
-  void on_message(const msgpackpp::parser &msg) {
+  rpc_result<bool> on_message(const msgpackpp::parser &msg) noexcept {
     // logger
     m_on_msg(msg);
 
+    if (!msg.is_array()) {
+      return {rpc_errors::invalid_format};
+    }
+    if (!msg[0].is_number()) {
+      return {rpc_errors::invalid_format};
+    }
     auto type = msg[0].get_number<int>();
     switch (type) {
     case 0: {
       // request [0, id, method, args]
+      if (msg.count() != 4) {
+        return {rpc_errors::invalid_format};
+      }
       auto id = msg[1].get_number<int>();
       auto method = msg[2].get_string();
       // execute callback
@@ -377,11 +384,14 @@ private:
       } else {
         m_on_rpc_error(result.status, msg);
       }
-      break;
+      return rpc_scope::OK(true);
     }
 
     case 2: {
       // response [2, method, args]
+      if (msg.count() != 3) {
+        return {rpc_errors::invalid_format};
+      }
 
       auto method = msg[1].get_string();
       // execute callback. no return value
@@ -389,15 +399,18 @@ private:
       if (!result.is_ok()) {
         m_on_rpc_error(result.status, msg);
       }
-      break;
+      return rpc_scope::OK(true);
     }
 
     case 1: {
       // response [1, id, error, result]
+      if (msg.count() != 4) {
+        return {rpc_errors::invalid_format};
+      }
       auto id = msg[1].get_number<int>();
       if (id == 0) {
         // error message
-        m_on_rpc_error(rpc_errors::invalid_rpc, msg);
+        m_on_rpc_error(rpc_errors::invalid_format, msg);
       } else {
         auto found = m_request_map.find(id);
         if (found != m_request_map.end()) {
@@ -411,12 +424,11 @@ private:
           m_on_rpc_error(rpc_errors::no_request_for_response, msg);
         }
       }
-      break;
+      return rpc_scope::OK(true);
     }
 
     default: {
-      m_on_rpc_error(rpc_errors::invalid_rpc, msg);
-      break;
+      return {rpc_errors::invalid_format};
     }
     }
   }

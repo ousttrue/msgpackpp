@@ -61,7 +61,6 @@ public:
                   &bytes_write, nullptr);
     if (!success) {
       auto error = GetLastError();
-      std::cerr << "error: WriteFile : " << error << std::endl;
     }
   }
 };
