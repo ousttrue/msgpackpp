@@ -838,7 +838,7 @@ struct body_index_and_size {
     case NEGATIVE_FIXNUM_0x03:
     case NEGATIVE_FIXNUM_0x02:
     case NEGATIVE_FIXNUM_0x01:
-      return OK(body_index_and_size{1, 0});
+      return OK(body_index_and_size{1, return_n<0>});
 #pragma endregion
 
     default:
@@ -2141,7 +2141,8 @@ public:
       current = current.next();
     }
 
-    throw std::runtime_error("key not found");
+    // not found
+    return {};
   }
 
   parse_result<parser> next() const noexcept {
@@ -2257,6 +2258,7 @@ struct nil_t {};
 constexpr nil_t nil = nil_t{};
 inline void serialize(packer &p, const nil_t) { p.pack_nil(); }
 inline void serialize(packer &p, const char *t) { p.pack_str(t); }
+inline void serialize(packer &p, std::string_view t) { p.pack_str(t); }
 inline void serialize(packer &p, bool t) { p.pack_bool(t); }
 
 inline void serialize(packer &p, signed char t) { p.pack_integer(t); }
