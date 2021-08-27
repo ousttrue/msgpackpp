@@ -470,12 +470,12 @@ public:
     write_async(message);
   }
 
-private:
   void write_async(const std::vector<uint8_t> &data) {
     m_on_send(data);
     m_session->write_async(data);
   }
 
+private:
   void
   send_request_async(const msgpackpp::bytes &mesage,
                      std::shared_ptr<std::promise<std::vector<uint8_t>>> p) {
