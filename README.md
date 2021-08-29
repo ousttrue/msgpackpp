@@ -2,6 +2,8 @@
 
 `c++17` header only [msgpack](https://github.com/msgpack/msgpack/blob/master/spec.md) implementation.
 
+`msgpack-rpc-asio` and `msgpackpp` is merged.
+
 # header
 ## msgpackpp/msgpackpp.h
 
