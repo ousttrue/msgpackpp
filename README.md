@@ -4,6 +4,8 @@
 
 `msgpack-rpc-asio` and `msgpackpp` is merged.
 
+<https://github.com/ousttrue/NvimTexture> backend.
+
 # header
 ## msgpackpp/msgpackpp.h
 
